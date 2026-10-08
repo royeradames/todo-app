@@ -225,23 +225,30 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
 
   await test.step("a callback that arrives twice lands on the list, not the expired page", async () => {
     // Hosted run 37779582609: a doubled callback turned a good sign-in into "expired".
-    // Both copies go out at once with this browser's cookies; the browser shows the second.
+    // The issuer answers the authorize request with a redirect to Todo's callback. Routes don't
+    // see redirect hops, so the test takes that redirect itself, sends the callback twice at once
+    // with this browser's cookies, and lets the browser follow the second answer.
     await page.goto(todoOrigin + "/account");
     await page.getByRole("button", { name: "Sign out of Todo" }).click();
     await expect(page).toHaveURL(/\/login/);
-    const callback = (url: URL) => url.origin === todoOrigin && url.pathname === "/api/auth/federation/callback";
+    const authorize = (url: URL) => url.origin === accountsOrigin && url.pathname.endsWith("/oauth2/authorize");
     const landed: string[] = [];
-    await page.context().route(callback, async (route) => {
-      const [first, second] = await Promise.all([route.fetch({ maxRedirects: 0 }), route.fetch({ maxRedirects: 0 })]);
-      landed.push(...[first, second].map((reply) => new URL(reply.headers().location ?? "/missing", todoOrigin).pathname + new URL(reply.headers().location ?? "/missing", todoOrigin).search));
-      await route.fulfill({ response: second });
+    await page.context().route(authorize, async (route) => {
+      const issued = await route.fetch({ maxRedirects: 0 });
+      const callback = new URL(issued.headers().location ?? "", route.request().url());
+      if (callback.origin !== todoOrigin) return route.fulfill({ response: issued });
+      const twice = await Promise.all([1, 2].map(() =>
+        route.fetch({ url: callback.href, method: "GET", headers: {}, maxRedirects: 0 })));
+      const targets = twice.map((reply) => new URL(reply.headers().location ?? "/missing", todoOrigin));
+      landed.push(...targets.map((target) => target.pathname + target.search));
+      await route.fulfill({ status: 302, headers: { location: targets[1].href } });
     });
     await page.goto(todoOrigin + "/todos");
     await page.getByRole("button", { name: "Continue with Breakthrough account" }).click();
     await expect(page).toHaveURL(todoOrigin + "/todos");
     await expect(page.getByText("Synthetic central task", { exact: true })).toBeVisible();
     expect(landed, "both copies land on the list").toEqual(["/todos", "/todos"]);
-    await page.context().unroute(callback);
+    await page.context().unroute(authorize);
   });
 
   await test.step("central sign-out ends the Todo session on its next read", async () => {
