@@ -54,10 +54,17 @@ async function createCentralAccount(page: Page, account: Person) {
     .locator("input")
     .and(page.getByLabel("Password", { exact: true }))
     .fill(account.password);
+  // royer-auth #10: every new-password form has a confirmation field.
+  await page.getByLabel("Confirm password", { exact: true }).fill(account.password);
+  // Live requirements: the long synthetic phrase meets every rule.
+  const rules = page.getByRole("list", { name: "Password requirements" });
+  await expect(rules.getByRole("listitem").first()).toContainText("met");
+  await expect(rules.getByRole("listitem").filter({ hasText: /not met/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Create account", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
   await page.goto(await verificationLink(account.email));
-  await expect(page).toHaveURL(/\/login/);
+  // royer-auth #11: the link lands on a readable "verified" page.
+  await expect(page.getByRole("heading", { name: "Your email is verified." })).toBeVisible();
 }
 /** Opens the saved list and signs in through the issuer's own screen. */
 async function signInToTodo(page: Page, account: Person) {
