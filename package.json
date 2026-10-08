@@ -1,0 +1,48 @@
+{
+  "name": "todo-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.11.1"
+  },
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1 --port 4325",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1 --port 4325",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/unit/*.test.ts",
+    "test:integration": "node --env-file=.env.local --import tsx --test tests/integration/*.test.ts",
+    "test:browser": "playwright test",
+    "db:plan": "node --env-file=.env.local --import tsx scripts/plan-migration.ts",
+    "db:migrate": "node --env-file=.env.local --import tsx scripts/apply-migration.ts",
+    "test:hosted": "playwright test -c playwright.hosted.config.ts"
+  },
+  "dependencies": {
+    "@royer/auth": "file:vendor/royer-auth-0.1.0-rc.4.tgz",
+    "@tanstack/react-form": "1.33.5",
+    "@tanstack/react-query": "5.104.1",
+    "@vercel/functions": "3.9.11",
+    "better-auth": "1.7.7",
+    "next": "16.3.6",
+    "pg": "8.23.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "0.0.1",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/postcss": "4.2.1",
+    "@types/node": "24.10.1",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.3.6",
+    "tailwindcss": "4.2.1",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

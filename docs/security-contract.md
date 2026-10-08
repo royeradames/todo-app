@@ -1,0 +1,25 @@
+# Todo security contract
+
+**Ownership.** Todo owns business permissions, rows, its origin and deployments. `@royer/auth` in central mode delegates credentials, passkeys, MFA, verification mail and recovery to the Breakthrough issuer. Todo keeps local principals, sessions, per-session grants and the unique issuer-and-subject mapping. Only the federated handler and `getPrincipal` are application interfaces; engine options are read by migration tooling only. Email is never a linking key. No existing users are migrated.
+
+**Sessions.** Every protected read and write calls `getPrincipal`, which reads the local session and introspects its grant at the issuer with no positive cache. Central sign-out or recovery ends Todo's session on its next read. A Todo session lasts at most one hour. "Sign out of Todo" removes the local session and revokes its grant; the central session stays. An unreachable issuer is a retry state (503 and the error page's Try again), never a signed-in or signed-out guess.
+
+**Sign-in returns.** `/login` sends a same-origin return path to `POST /api/auth/federation/start`. The package validates the normalized path and checks it again at the callback, so a crafted path cannot send the browser to another origin. The browser follows only the HTTPS issuer address that start returns.
+
+**Issuer access.** The preview issuer is behind Vercel Deployment Protection. Its Trusted Sources rule admits only Todo's Preview deployments, Preview to Preview. Each issuer request carries a fresh Vercel OIDC token in `x-vercel-trusted-oidc-idp-token`; it is separate from any user token and never reaches the browser. The client secret lives only in Vercel's sensitive Preview settings for the registered branch.
+
+**Origins.** `AUTH_BASE_URL` is the exact registered origin; the handler refuses requests addressed to any other host, so a deployment-specific URL cannot complete sign-in. Preview hosts are never trusted dynamically. Canonical future origin: `https://todo.royeradames.com`. Local origin: `http://localhost:4325`. Rate limits key on Vercel's `x-vercel-forwarded-for`, which Vercel overwrites at its edge.
+
+**Data.** Runtime uses one pooled `pg` connection with Vercel attachment. Migration planning reads the direct connection and writes SQL for review; applying it is a separate explicit operation, never at startup or build. The application never accepts an owner ID from the browser. Mutations require the exact Origin and a bounded parsed command, lock the person's list, compare and increment its version. Reordering accepts an exact permutation of owned IDs, including filtered-out rows. Another account cannot read, move or change those rows. An outdated list gets a 409 and is reloaded. There is no offline write queue.
+
+A write also sends the displayed principal in `x-todo-account`. This is only an equality assertion against the server principal: it rejects a stale screen after another tab changes the session, and never chooses ownership. When the account changes or the session ends in another tab, the list is hidden and the screen offers to open the current list.
+
+**Privacy.** Task text can contain private plans. Store only the identity reference, title, completed flag and order; never send task text or email to logs or analytics. Cookies are host-only and HttpOnly. Browser query state is account-scoped and cleared on sign-out. The issuer completes verification and enrolled MFA before it returns an authorization code, so an incomplete sign-in never reaches `/todos`.
+
+**Demo.** Public `/` is a named demo with fictional data and tab-local changes. Theme alone is a device preference. No demo data is imported into an account.
+
+**Mail and test accounts.** Todo sends no mail and has no test-mail route. Hosted checks create synthetic `todo-suite-…@sink.accounts-preview.test` accounts on the issuer's token-protected preview sink and remove them from both databases after each run. Missing configuration returns an unavailable error without creating a session.
+
+**Production.** The issuer refuses Vercel Production, so Todo Production has no account settings and its account routes fail closed until a production issuer exists.
+
+**Verification gates.** Generated schema review, reviewed development migration, real PostgreSQL ownership/concurrency tests, browser checks of the saved-list states, the hosted central journey on the protected previews, dependency/build/type/lint checks and independent review. No real account or mail data, and no physical biometric claim.
