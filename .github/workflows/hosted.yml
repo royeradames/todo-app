@@ -1,0 +1,80 @@
+name: Hosted Todo journey
+# Runs the synthetic central sign-in journey against the protected Todo
+# preview after each successful preview deployment of the registered branch,
+# or on demand.
+on:
+  deployment_status:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hosted-todo
+  cancel-in-progress: false
+jobs:
+  hosted:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+       github.event.deployment.environment == 'Preview')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TODO_PREVIEW_URL: ${{ vars.TODO_PREVIEW_URL }}
+    steps:
+      # The registered preview origin serves one branch (TODO_PREVIEW_BRANCH).
+      # Test only when this deployment is that branch's current head.
+      - id: target
+        env:
+          BRANCH: ${{ vars.TODO_PREVIEW_BRANCH }}
+          DEPLOYED: ${{ github.event.deployment.sha }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$BRANCH" ] || [ -z "$TODO_PREVIEW_URL" ]; then echo "run=false" >> "$GITHUB_OUTPUT"; echo "TODO_PREVIEW_BRANCH or TODO_PREVIEW_URL is not set."; exit 0; fi
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          head=$(gh api "repos/$REPOSITORY/branches/$BRANCH" --jq .commit.sha 2>/dev/null || true)
+          if [ "$head" = "$DEPLOYED" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; echo "Deployment $DEPLOYED is not the head of $BRANCH."; fi
+      - name: Wait for the registered origin to serve this deployment
+        if: steps.target.outputs.run == 'true' && github.event_name == 'deployment_status'
+        env:
+          DEPLOYMENT_URL: ${{ github.event.deployment_status.target_url }}
+          BYPASS: ${{ secrets.TODO_PREVIEW_BYPASS }}
+        run: |
+          [[ "$DEPLOYMENT_URL" =~ ^https://todo-[a-z0-9]+-royer-adames-projects\.vercel\.app$ ]] || { echo "Unexpected deployment URL."; exit 1; }
+          id() { curl -fsS -H "x-vercel-protection-bypass: $BYPASS" "$1/" | grep -o 'data-dpl-id="[^"]*"' | head -1; }
+          want=$(id "$DEPLOYMENT_URL")
+          test -n "$want"
+          for attempt in $(seq 1 30); do
+            [ "$(id "$TODO_PREVIEW_URL")" = "$want" ] && exit 0
+            sleep 10
+          done
+          echo "The registered origin never served this deployment."; exit 1
+      - uses: actions/checkout@v7.0.1
+        if: steps.target.outputs.run == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7.0.0
+        if: steps.target.outputs.run == 'true'
+        with:
+          node-version: 24.11.1
+          cache: npm
+      - run: npm ci
+        if: steps.target.outputs.run == 'true'
+      - run: npx playwright install --with-deps chromium
+        if: steps.target.outputs.run == 'true'
+      - run: npm run test:hosted
+        if: steps.target.outputs.run == 'true'
+        env:
+          PLAYWRIGHT_CHANNEL: chromium
+          TODO_PREVIEW_BYPASS: ${{ secrets.TODO_PREVIEW_BYPASS }}
+          ACCOUNTS_PREVIEW_BYPASS: ${{ secrets.ACCOUNTS_PREVIEW_BYPASS }}
+          AUTH_PREVIEW_SINK_TOKEN: ${{ secrets.AUTH_PREVIEW_SINK_TOKEN }}
+      - uses: actions/upload-artifact@v7.0.2
+        if: always() && steps.target.outputs.run == 'true'
+        with:
+          name: hosted-todo-results
+          path: |
+            test-results-hosted/**/*.png
+            test-results-hosted/**/error-context.md
+          if-no-files-found: ignore
+          retention-days: 7

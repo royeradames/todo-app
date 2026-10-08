@@ -9,3 +9,4 @@ test-results/
 playwright-report/
 *.tsbuildinfo
 vendor/superseded/
+test-results-hosted/
