@@ -197,6 +197,25 @@ export function TodoList({
     if (toId) move(current.id, toId);
   }
 
+  // If the row loses pointer capture, the release still ends the drag.
+  const dragActive = dragging !== null;
+  useEffect(() => {
+    if (!dragActive) return;
+    const release = () => {
+      const current = drag.current;
+      if (!current) return;
+      if (current.timer) clearTimeout(current.timer);
+      drag.current = null;
+      setDragging(null);
+    };
+    window.addEventListener("pointerup", release);
+    window.addEventListener("pointercancel", release);
+    return () => {
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
+    };
+  }, [dragActive]);
+
   // While a touch drag is active, the finger moves the task, not the page.
   useEffect(() => {
     const element = list.current;

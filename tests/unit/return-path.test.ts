@@ -15,6 +15,7 @@ test("return paths stay on this origin", () => {
     "/.//evil.example",
     "/\\evil.example",
     "javascript:alert(1)",
+    ["/account", "/todos"],
   ])
     assert.equal(safeReturnPath(unsafe, origin), "/todos", String(unsafe));
 });

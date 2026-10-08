@@ -10,9 +10,15 @@ export const metadata = { title: "Sign in" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ returnTo?: string; error?: string }>;
+  searchParams: Promise<{
+    returnTo?: string | string[];
+    error?: string | string[];
+  }>;
 }) {
-  const { returnTo, error } = await searchParams;
+  const query = await searchParams;
+  // A repeated parameter arrives as an array; ignore it rather than guess.
+  const returnTo = typeof query.returnTo === "string" ? query.returnTo : undefined;
+  const error = typeof query.error === "string" ? query.error : undefined;
   const viewer = await currentViewer(await headers());
   // Signed-in people never see the sign-in page.
   if (viewer.state === "signed-in")
@@ -20,6 +26,7 @@ export default async function LoginPage({
   if (viewer.state === "accounts-off")
     return (
       <AuthShell
+        backLink={false}
         eyebrow="Accounts"
         title="Accounts are coming soon."
         description="Soon one Breakthrough account will keep your Todo list on every device and open the other apps in the family."

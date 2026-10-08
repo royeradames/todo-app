@@ -38,7 +38,11 @@ const notLoaded = () => null;
  * The signed-out list. It lives only in this browser, so it works with no
  * account and no server.
  */
-export function LocalTodos({ accounts }: { accounts: boolean }) {
+export function LocalTodos({
+  accounts,
+}: {
+  accounts: "off" | "signed-out" | "signed-in";
+}) {
   const raw = useSyncExternalStore(subscribe, storedList, notLoaded);
   // Holds the list only when this browser refuses to store it.
   const [unsaved, setUnsaved] = useState<Todo[] | null>(null);
@@ -63,12 +67,14 @@ export function LocalTodos({ accounts }: { accounts: boolean }) {
       notice={
         unsaved
           ? "This browser could not save your tasks. They stay until you close this tab."
-          : accounts
-            ? "Your tasks are saved in this browser."
-            : "Accounts are coming soon. Your tasks are saved in this browser only."
+          : accounts === "off"
+            ? "Accounts are coming soon. Your tasks are saved in this browser only."
+            : "Your tasks are saved in this browser."
       }
       tools={
-        accounts ? (
+        accounts === "signed-in" ? (
+          <Link href="/todos">Open your saved list</Link>
+        ) : accounts === "signed-out" ? (
           <Link href="/login?returnTo=%2Ftodos">
             Sign in to keep your tasks on every device
           </Link>
