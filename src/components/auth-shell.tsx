@@ -13,6 +13,9 @@ export function AuthShell({
 }) {
   return (
     <main id="main" className="auth-layout">
+      <Link className="back-link" href="/">
+        Back to Todo
+      </Link>
       <header>
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>

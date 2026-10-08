@@ -22,7 +22,7 @@ export default function ErrorPage({ retry }: { retry: () => void }) {
       >
         {busy ? "Trying again…" : "Try again"}
       </button>
-      <Link href="/">Return to the demo</Link>
+      <Link href="/">Back to Todo</Link>
     </main>
   );
 }

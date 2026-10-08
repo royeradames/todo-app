@@ -1,4 +1,4 @@
-import { getAuth } from "@/lib/auth-server";
+import { accountsComingSoon, getAuth } from "@/lib/auth-server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const callbackPath = "/api/auth/federation/callback";
@@ -8,7 +8,11 @@ const callbackPath = "/api/auth/federation/callback";
  * sign-in must show a page, not the handler's JSON. Send it back to /login
  * with a reason, keeping any cookies the handler cleared.
  */
-function callbackFailure(response: Response | null, origin: string) {
+function callbackFailure(
+  response: Response | null,
+  origin: string,
+  destination?: string,
+) {
   const reason =
     !response || response.status === 503
       ? "unavailable"
@@ -16,7 +20,7 @@ function callbackFailure(response: Response | null, origin: string) {
         ? "linking"
         : "expired";
   const headers = new Headers({
-    location: new URL(`/login?error=${reason}`, origin).href,
+    location: new URL(destination ?? `/login?error=${reason}`, origin).href,
     "cache-control": "private, no-store",
   });
   for (const cookie of response?.headers.getSetCookie() ?? [])
@@ -27,8 +31,16 @@ function callbackFailure(response: Response | null, origin: string) {
 async function handle(request: Request) {
   const url = new URL(request.url);
   const callback = request.method === "GET" && url.pathname === callbackPath;
+  const accounts = getAuth();
+  if (!accounts)
+    return callback
+      ? callbackFailure(null, url.origin, "/login")
+      : Response.json(
+          { error: accountsComingSoon },
+          { status: 404, headers: { "cache-control": "private, no-store" } },
+        );
   try {
-    const response = await getAuth().handler(request);
+    const response = await accounts.handler(request);
     return callback && response.status >= 400
       ? callbackFailure(response, url.origin)
       : response;

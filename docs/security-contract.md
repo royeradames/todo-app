@@ -2,7 +2,7 @@
 
 **Ownership.** Todo owns business permissions, rows, its origin and deployments. `@royer/auth` in central mode delegates credentials, passkeys, MFA, verification mail and recovery to the Breakthrough issuer. Todo keeps local principals, sessions, per-session grants and the unique issuer-and-subject mapping. Only the federated handler and `getPrincipal` are application interfaces; engine options are read by migration tooling only. Email is never a linking key. No existing users are migrated.
 
-**Sessions.** Every protected read and write calls `getPrincipal`, which reads the local session and introspects its grant at the issuer with no positive cache. Central sign-out or recovery ends Todo's session on its next read. A Todo session lasts at most one hour. "Sign out of Todo" removes the local session and revokes its grant; the central session stays. An unreachable issuer is a retry state (503 and the error page's Try again), never a signed-in or signed-out guess.
+**Sessions.** Every protected read and write calls `getPrincipal`, which reads the local session and introspects its grant at the issuer with no positive cache. Central sign-out or recovery ends Todo's session on its next read. A Todo session lasts at most one hour. "Sign out of Todo" removes the local session and revokes its grant; the central session stays. An unreachable issuer is a retry state (503 from the APIs, and a "temporarily unavailable" page with Try again), never a signed-in or signed-out guess. Signed-in people who open `/login` go straight to their return path.
 
 **Sign-in returns.** `/login` sends a same-origin return path to `POST /api/auth/federation/start`. The package validates the normalized path and checks it again at the callback, so a crafted path cannot send the browser to another origin. The browser follows only the HTTPS issuer address that start returns.
 
@@ -16,10 +16,10 @@ A write also sends the displayed principal in `x-todo-account`. This is only an 
 
 **Privacy.** Task text can contain private plans. Store only the identity reference, title, completed flag and order; never send task text or email to logs or analytics. Cookies are host-only and HttpOnly. Browser query state is account-scoped and cleared on sign-out. The issuer completes verification and enrolled MFA before it returns an authorization code, so an incomplete sign-in never reaches `/todos`.
 
-**Demo.** Public `/` is a named demo with fictional data and tab-local changes. Theme alone is a device preference. No demo data is imported into an account.
+**Browser list.** Public `/` keeps its tasks in this browser's localStorage only, starting from the design's sample tasks. Stored data is parsed and validated like any input; a damaged value is ignored. It never reaches a server, log or analytics, and it is never imported into an account. Theme is also a device preference.
 
 **Mail and test accounts.** Todo sends no mail and has no test-mail route. Hosted checks create synthetic `todo-suite-…@sink.accounts-preview.test` accounts on the issuer's token-protected preview sink and remove them from both databases after each run. Missing configuration returns an unavailable error without creating a session.
 
-**Production.** The issuer refuses Vercel Production, so Todo Production has no account settings and its account routes fail closed until a production issuer exists.
+**Production.** The issuer refuses Vercel Production, so Todo Production has no account settings. Accounts are off: `/todos` and `/account` redirect to `/login`, which says accounts are coming soon, the account and list APIs answer 404 without setting cookies, and the browser list keeps working. No route returns a server error because an issuer is missing. Partial settings are logged as `account_settings_invalid` and run the same way.
 
 **Verification gates.** Generated schema review, reviewed development migration, real PostgreSQL ownership/concurrency tests, browser checks of the saved-list states, the hosted central journey on the protected previews, dependency/build/type/lint checks and independent review. No real account or mail data, and no physical biometric claim.
