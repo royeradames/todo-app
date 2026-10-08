@@ -50,9 +50,12 @@ export async function startSignIn(returnTo: string | null) {
 
 /** Ends this browser's Todo session. The central account stays signed in. */
 export async function signOutOfTodo() {
+  // The auth endpoints accept JSON bodies only, so send an empty object.
   const response = await fetch("/api/auth/sign-out", {
     method: "POST",
     credentials: "same-origin",
+    headers: { "content-type": "application/json" },
+    body: "{}",
   });
   if (!response.ok) throw new Error("Could not finish signing out. Please try again.");
 }

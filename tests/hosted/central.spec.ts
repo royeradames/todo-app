@@ -152,6 +152,7 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
   await test.step("central sign-out ends the Todo session on its next read", async () => {
     const response = await page.request.post(accountsOrigin + "/api/auth/sign-out", {
       headers: { origin: accountsOrigin },
+      data: {},
     });
     expect(response.ok()).toBe(true);
     expect((await page.request.get(todoOrigin + "/api/todos")).status()).toBe(401);
