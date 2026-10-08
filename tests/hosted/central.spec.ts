@@ -223,6 +223,27 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
     await expect(page.getByText("Synthetic central task", { exact: true })).toBeVisible();
   });
 
+  await test.step("a callback that arrives twice lands on the list, not the expired page", async () => {
+    // Hosted run 37779582609: a doubled callback turned a good sign-in into "expired".
+    // Both copies go out at once with this browser's cookies; the browser shows the second.
+    await page.goto(todoOrigin + "/account");
+    await page.getByRole("button", { name: "Sign out of Todo" }).click();
+    await expect(page).toHaveURL(/\/login/);
+    const callback = (url: URL) => url.origin === todoOrigin && url.pathname === "/api/auth/federation/callback";
+    const landed: string[] = [];
+    await page.context().route(callback, async (route) => {
+      const [first, second] = await Promise.all([route.fetch({ maxRedirects: 0 }), route.fetch({ maxRedirects: 0 })]);
+      landed.push(...[first, second].map((reply) => new URL(reply.headers().location ?? "/missing", todoOrigin).pathname + new URL(reply.headers().location ?? "/missing", todoOrigin).search));
+      await route.fulfill({ response: second });
+    });
+    await page.goto(todoOrigin + "/todos");
+    await page.getByRole("button", { name: "Continue with Breakthrough account" }).click();
+    await expect(page).toHaveURL(todoOrigin + "/todos");
+    await expect(page.getByText("Synthetic central task", { exact: true })).toBeVisible();
+    expect(landed, "both copies land on the list").toEqual(["/todos", "/todos"]);
+    await page.context().unroute(callback);
+  });
+
   await test.step("central sign-out ends the Todo session on its next read", async () => {
     const response = await page.request.post(accountsOrigin + "/api/auth/sign-out", {
       headers: { origin: accountsOrigin },
