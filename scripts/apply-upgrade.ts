@@ -1,24 +1,14 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { Pool } from "pg";
+import { migrationTarget } from "./migration-target";
 
-// Applies one reviewed, additive upgrade to the existing development/preview store, once.
+// Applies one reviewed, additive upgrade to a migrated store (development or production), once.
 // Usage: node --import tsx scripts/apply-upgrade.ts 0003_rc5_federation --reviewed-sha256=HASH
 const revision = process.argv[2] ?? "";
 const reviewedHash = process.argv.find((value) => value.startsWith("--reviewed-sha256="))?.split("=")[1];
 if (!/^\d{4}_[a-z0-9_]+$/.test(revision)) throw new Error("Name the upgrade revision, for example 0003_rc5_federation.");
-const connectionString = process.env.DATABASE_URL_UNPOOLED;
-// URL errors would echo the connection string; read the hostname without them.
-function directHost(value: string | undefined) {
-  try { return value ? !new URL(value).hostname.includes("-pooler") : false; } catch { return false; }
-}
-if (
-  process.env.NEON_PROJECT_ID !== "rough-haze-94222851" ||
-  process.env.AUTH_BASE_URL !== "http://localhost:4325" ||
-  !directHost(connectionString)
-) {
-  throw new Error("Upgrade target must be the assigned direct development database.");
-}
+const { name: targetName, connectionString } = migrationTarget(process.argv);
 const sql = await readFile(new URL(`../migrations/${revision}.sql`, import.meta.url), "utf8");
 const actualHash = createHash("sha256").update(sql).digest("hex");
 if (!reviewedHash || reviewedHash !== actualHash) throw new Error("Supply the independently reviewed upgrade SHA-256.");
@@ -37,7 +27,7 @@ try {
     await client.query(sql);
     await client.query("INSERT INTO todo_schema_migrations(revision,sha256) VALUES($1, $2)", [revision, actualHash]);
     await client.query("COMMIT");
-    console.log(JSON.stringify({ applied: true, target: "todo-development-db", revision, sha256: actualHash }));
+    console.log(JSON.stringify({ applied: true, target: targetName, revision, sha256: actualHash }));
   }
 } catch {
   await client.query("ROLLBACK");
