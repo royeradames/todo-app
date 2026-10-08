@@ -1,23 +1,14 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { Pool } from "pg";
+import { migrationTarget } from "./migration-target";
 
-// This first migration only initializes the named, empty development store.
+// This first migration only initializes a named, empty store (development or production).
 // Hosted rollout is a separate reviewed operation, not an app-startup side effect.
 const reviewedHash = process.argv
   .find((value) => value.startsWith("--reviewed-sha256="))
   ?.split("=")[1];
-const connectionString = process.env.DATABASE_URL_UNPOOLED;
-if (
-  process.env.NEON_PROJECT_ID !== "rough-haze-94222851" ||
-  !connectionString ||
-  new URL(connectionString).hostname.includes("-pooler") ||
-  process.env.AUTH_BASE_URL !== "http://localhost:4325"
-) {
-  throw new Error(
-    "Migration target must be the assigned direct development database.",
-  );
-}
+const { name: targetName, connectionString } = migrationTarget(process.argv);
 const sql = (
   await Promise.all(
     ["0001_auth.sql", "0002_todos.sql"].map((name) =>
@@ -58,7 +49,7 @@ try {
   console.log(
     JSON.stringify({
       applied: true,
-      target: "todo-development-db",
+      target: targetName,
       revision: "foundation",
       sha256: actualHash,
     }),
