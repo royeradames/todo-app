@@ -445,13 +445,6 @@ h3 {
   display: grid;
   gap: 0.75rem;
 }
-.device-code {
-  font-family: monospace;
-  font-size: 2rem;
-  letter-spacing: 0.2em;
-  text-align: center;
-  overflow-wrap: anywhere;
-}
 .mono {
   font-family: monospace;
   overflow-wrap: anywhere;
