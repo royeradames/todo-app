@@ -39,7 +39,8 @@ Todo owns `todo_lists` and `todo_items`, foreign-keyed to immutable local user I
 - `npm run test:integration` with `TODO_RUN_DATABASE_TESTS=1`: real PostgreSQL ownership, concurrency and cascade checks in a disposable schema.
 - `npm run test:browser`: the public demo, keyboard and narrow screens (`TODO_TEST_PORT` overrides 4325).
 - `npm run build`, then `node scripts/verify-production-boundary.mjs`: unconfigured accounts and data fail closed.
-- `npm run test:hosted`: the real central journey on the protected previews with synthetic `@sink.accounts-preview.test` accounts. It needs `TODO_PREVIEW_URL`, `TODO_PREVIEW_BYPASS`, `ACCOUNTS_PREVIEW_BYPASS` and `AUTH_PREVIEW_SINK_TOKEN` in the runner's environment. Remove the `todo-suite-` accounts afterwards from both databases.
+- `npm run test:browser`: also covers an unreachable issuer and store (sign-in alert, retry page, callback page instead of JSON) and a crafted return path, using closed local ports.
+- `npm run test:hosted`: the real central journey on the protected previews with synthetic `@sink.accounts-preview.test` accounts: sign-in, saved list, 409 refresh across tabs, another account's isolation, sign-out in another tab, expired callback, 400px pages, local and central sign-out. The **Hosted Todo journey** workflow runs it after each Preview deploy of the registered branch, then `scripts/cleanup-hosted-accounts.mjs` removes every `todo-suite-` account from both databases. Its secrets live only on the branch-limited `hosted-preview` GitHub environment.
 
 ## Design and operation
 

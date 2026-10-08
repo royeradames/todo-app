@@ -10,7 +10,10 @@ export function returnPath(value: string | null) {
   if (!value) return "/todos";
   try {
     const url = new URL(value, window.location.origin);
-    return url.origin === window.location.origin
+    // Check the normalized path: "/.//host" normalizes to "//host".
+    return url.origin === window.location.origin &&
+      !url.pathname.startsWith("//") &&
+      !url.pathname.includes("\\")
       ? `${url.pathname}${url.search}`
       : "/todos";
   } catch {

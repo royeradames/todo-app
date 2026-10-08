@@ -106,6 +106,7 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
     .object({ ownerId: z.string(), version: z.number(), items: z.array(z.object({ id: z.string() })) })
     .parse(await (await page.request.get(todoOrigin + "/api/todos")).json());
   expect(mine.items).toHaveLength(1);
+  const firstTaskId = mine.items[0].id;
 
   await test.step("another account sees an empty list and cannot touch this one", async () => {
     const otherPage = await newPage(browser);
@@ -118,10 +119,23 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
     expect(theirs.ownerId).not.toBe(mine.ownerId);
     const foreign = await otherPage.request.post(todoOrigin + "/api/todos", {
       headers: { origin: todoOrigin, "x-todo-account": theirs.ownerId },
-      data: { version: 0, command: { kind: "remove", id: mine.items[0].id } },
+      data: { version: 0, command: { kind: "remove", id: firstTaskId } },
     });
     expect(foreign.status()).toBe(400);
     await otherPage.context().close();
+  });
+
+  await test.step("a stale tab gets a 409 and refreshes to the saved list", async () => {
+    const stale = await page.context().newPage();
+    await stale.goto(todoOrigin + "/todos");
+    await expect(stale.getByText("Synthetic central task", { exact: true })).toBeVisible();
+    await add(page, "Saved from the first tab");
+    await stale.getByLabel("Create a new todo").fill("Saved from the stale tab");
+    await stale.getByRole("button", { name: "Add task", exact: true }).click();
+    // The stale write is refused and the list reloads with the other tab's task.
+    await expect(stale.getByText("Saved from the first tab", { exact: true })).toBeVisible();
+    await expect(stale.getByText("Saved from the stale tab", { exact: true })).toHaveCount(0);
+    await stale.close();
   });
 
   const untrusted = await page.request.post(todoOrigin + "/api/todos", {
@@ -137,6 +151,48 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
       page.getByRole("link", { name: "Manage your Breakthrough account" }),
     ).toHaveAttribute("href", accountsOrigin + "/account");
     await page.screenshot({ path: "test-results-hosted/account-1440.png", fullPage: true });
+  });
+
+  await test.step("sign-in and account pages fit 400px", async () => {
+    await page.setViewportSize({ width: 400, height: 860 });
+    for (const path of ["/account", "/login"]) {
+      await page.goto(todoOrigin + path);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), path).toBe(true);
+      await page.screenshot({ path: `test-results-hosted/${path.slice(1)}-400.png`, fullPage: true });
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(todoOrigin + "/account");
+  });
+
+  await test.step("an expired callback shows the sign-in page, not raw JSON", async () => {
+    const other = await page.context().newPage();
+    await other.goto(todoOrigin + "/api/auth/federation/callback?state=expired&code=expired");
+    await expect(other).toHaveURL(todoOrigin + "/login?error=expired");
+    await expect(other.locator("main [role=alert]")).toHaveText(
+      "That sign-in expired or could not be verified. Please start again.",
+    );
+    await other.close();
+  });
+
+  await test.step("signing out in another tab hides this tab's list", async () => {
+    const listTab = await page.context().newPage();
+    await listTab.goto(todoOrigin + "/todos");
+    await expect(listTab.getByText("Synthetic central task", { exact: true })).toBeVisible();
+    const response = await page.request.post(todoOrigin + "/api/auth/sign-out", {
+      headers: { origin: todoOrigin }, data: {},
+    });
+    expect(response.ok()).toBe(true);
+    await listTab.getByLabel("Create a new todo").fill("Never saved");
+    await listTab.getByRole("button", { name: "Add task", exact: true }).click();
+    await expect(listTab.getByRole("heading", { name: "Your list is hidden." })).toBeVisible();
+    await expect(listTab.getByRole("link", { name: "Open your current list" })).toBeVisible();
+    await expect(listTab.getByRole("button", { name: /sign out/i })).toHaveCount(0);
+    await listTab.close();
+    // Back in through the still-live central session.
+    await page.goto(todoOrigin + "/todos");
+    await page.getByRole("button", { name: "Continue with Breakthrough account" }).click();
+    await expect(page).toHaveURL(todoOrigin + "/todos");
+    await page.goto(todoOrigin + "/account");
   });
 
   await test.step("signing out of Todo keeps the central session for a one-click return", async () => {

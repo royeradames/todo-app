@@ -2,9 +2,15 @@
 import { useState } from "react";
 import { startSignIn } from "@/lib/auth-client";
 
-export function Login({ returnTo }: { returnTo: string | null }) {
+export function Login({
+  returnTo,
+  failure,
+}: {
+  returnTo: string | null;
+  failure: string | null;
+}) {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(failure ?? "");
   async function continueToAccount() {
     // Busy, not disabled: the button stays focusable and announced.
     if (busy) return;

@@ -13,6 +13,8 @@ export function SavedTodos({ ownerId }: { ownerId: string }) {
   const alive = useRef(true);
   const [notice, setNotice] = useState("");
   const [signedOut, setSignedOut] = useState(false);
+  // A save answered 401: the session ended elsewhere, not by this screen.
+  const [sessionLost, setSessionLost] = useState(false);
   // Another tab can sign out or switch accounts; recheck on focus.
   const currentSession = useQuery({
     queryKey: ["account"],
@@ -32,12 +34,12 @@ export function SavedTodos({ ownerId }: { ownerId: string }) {
   const query = useQuery({
     queryKey: key,
     queryFn: ({ signal }) => requestTodos(ownerId, undefined, signal),
-    enabled: !signedOut && !accountChanged,
+    enabled: !signedOut && !sessionLost && !accountChanged,
     refetchOnWindowFocus: true,
   });
   const mutation = useMutation({
     mutationFn: async (command: TodoCommand) => {
-      if (!alive.current || signedOut || accountChanged || !query.data)
+      if (!alive.current || signedOut || sessionLost || accountChanged || !query.data)
         throw new Error("Sign in and reload your list first.");
       return requestTodos(ownerId, { version: query.data.version, command });
     },
@@ -55,7 +57,7 @@ export function SavedTodos({ ownerId }: { ownerId: string }) {
       if (!alive.current || currentAccount.current !== ownerId) return;
       setNotice(error.message);
       if (error instanceof TodoApiError && error.status === 401) {
-        setSignedOut(true);
+        setSessionLost(true);
         await client.cancelQueries({ queryKey: key });
         client.removeQueries({ queryKey: key });
       } else if (error instanceof TodoApiError && error.status === 409)
@@ -70,7 +72,11 @@ export function SavedTodos({ ownerId }: { ownerId: string }) {
       client.removeQueries({ queryKey: ["todos", ownerId] });
     };
   }, [client, ownerId]);
+  const [signingOut, setSigningOut] = useState(false);
   async function signOut() {
+    // Busy, not disabled: a repeat press while signing out does nothing.
+    if (signingOut) return;
+    setSigningOut(true);
     alive.current = false;
     await client.cancelQueries({ queryKey: key });
     client.removeQueries({ queryKey: key });
@@ -80,24 +86,41 @@ export function SavedTodos({ ownerId }: { ownerId: string }) {
       window.location.assign(new URL("/login", window.location.origin).href);
     } catch {
       setNotice("Could not finish signing out. Please try again.");
+      setSigningOut(false);
     }
   }
-  if (
-    signedOut ||
-    accountChanged ||
-    (query.error instanceof TodoApiError && query.error.status === 401)
-  )
+  const sessionEnded =
+    query.error instanceof TodoApiError && query.error.status === 401;
+  if (!signedOut && (accountChanged || sessionEnded || sessionLost))
+    // Another tab signed out or switched accounts. Nothing to sign out here;
+    // reopening the list shows whichever account this browser now holds.
     return (
       <main id="main" className="auth-layout">
         <h1>Your list is hidden.</h1>
         <p role="status">
-          {notice ||
-            (accountChanged
-              ? "Sign in again to open your current account."
-              : "Signing out…")}
+          {accountChanged && currentSession.data
+            ? "This browser switched to another account in a different tab."
+            : "You were signed out in another tab or your session ended."}
         </p>
-        <Link href="/login">Sign in again</Link>
-        <button onClick={() => void signOut()}>Retry sign out</button>
+        <a className="button primary" href="/todos">
+          Open your current list
+        </a>
+      </main>
+    );
+  if (signedOut)
+    return (
+      <main id="main" className="auth-layout">
+        <h1>Your list is hidden.</h1>
+        <p role="status">{notice || "Signing out…"}</p>
+        {notice && (
+          <button
+            className="button"
+            aria-busy={signingOut || undefined}
+            onClick={() => void signOut()}
+          >
+            {signingOut ? "Signing out…" : "Try signing out again"}
+          </button>
+        )}
       </main>
     );
   if (!query.data)
@@ -128,12 +151,21 @@ export function SavedTodos({ ownerId }: { ownerId: string }) {
         <>
           <Link href="/account">Account</Link>
           <button
-            disabled={mutation.isPending || query.isFetching}
-            onClick={() => void query.refetch()}
+            aria-busy={query.isFetching || undefined}
+            onClick={() => {
+              // Busy, not disabled: ignore presses while a save or refresh runs.
+              if (mutation.isPending || query.isFetching) return;
+              void query.refetch();
+            }}
           >
-            Refresh list
+            {query.isFetching ? "Refreshing…" : "Refresh list"}
           </button>
-          <button onClick={() => void signOut()}>Sign out</button>
+          <button
+            aria-busy={signingOut || undefined}
+            onClick={() => void signOut()}
+          >
+            {signingOut ? "Signing out…" : "Sign out"}
+          </button>
         </>
       }
     />
