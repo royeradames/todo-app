@@ -1,11 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 export function AuthShell({
+  backLink = true,
   eyebrow,
   title,
   description,
   children,
 }: {
+  backLink?: boolean;
   eyebrow: string;
   title: string;
   description: string;
@@ -13,6 +15,11 @@ export function AuthShell({
 }) {
   return (
     <main id="main" className="auth-layout">
+      {backLink && (
+        <Link className="back-link" href="/">
+          Back to Todo
+        </Link>
+      )}
       <header>
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>

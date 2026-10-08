@@ -1,6 +1,6 @@
 # Todo
 
-Private Frontend Mentor Todo implementation and the first central-mode `@royer/auth` consumer. Public `/` is a fictional, tab-only demo. `/todos` is each signed-in person's durable list. There is no automatic demo import or shared family account database.
+Private Frontend Mentor Todo implementation and the first central-mode `@royer/auth` consumer. Public `/` is a list saved only in this browser (localStorage), starting from the design's sample tasks. `/todos` is each signed-in person's durable list. The browser list is never imported into an account, and there is no shared family account database.
 
 ## Accounts
 
@@ -23,9 +23,19 @@ The pinned private package archive is `vendor/royer-auth-0.1.0-rc.4.tgz`, SHA-25
 | `AUTH_CLIENT_ID`, `AUTH_CLIENT_SECRET` | Issued once by the issuer operator for Todo's exact callback and sign-out addresses. |
 | `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | Pooled runtime and direct migration connections. |
 
-Missing configuration fails closed. On Vercel, each issuer request carries a fresh Vercel OIDC token in `x-vercel-trusted-oidc-idp-token`, which the protected issuer admits through its **Trusted Sources** rule for this project's Preview deployments. Credentials live only in Vercel and `.env.local`; never print or commit them.
+`setup.json` lists every setting with why it exists and who sets it. `npm test` checks it covers every setting the code reads (`npm run test:setup`), and the `royer-setup` doctor (`setup-doctor.mjs check setup.json --target production`) checks it against live Vercel settings without reading values. Missing configuration turns accounts off. On Vercel Preview, each issuer request carries a fresh Vercel OIDC token in `x-vercel-trusted-oidc-idp-token`, which the protected issuer admits through its **Trusted Sources** rule for this project's Preview deployments. Credentials live only in Vercel and `.env.local`; never print or commit them.
 
-**Preview.** The protected Preview of `feat/todo-auth-foundation` is registered at `https://todo-app-git-feat-todo-auth-foundation-royer-adames-projects.vercel.app`; its settings are scoped to that branch. A different stable origin needs its own client registration. The issuer refuses Vercel Production, so Todo Production has no account settings and its account routes fail closed until a production issuer exists.
+**Preview.** The protected Preview of `feat/todo-auth-foundation` is registered at `https://todo-app-git-feat-todo-auth-foundation-royer-adames-projects.vercel.app`; its settings are scoped to that branch. A different stable origin needs its own client registration.
+
+**Accounts off.** With no issuer registration (`AUTH_ISSUER_URL`, `AUTH_CLIENT_ID` and `AUTH_CLIENT_SECRET` all empty), accounts are off. That is Production today, because the issuer refuses Vercel Production and no production issuer exists yet. `/` keeps working in this browser and says "Accounts are coming soon"; `/todos` and `/account` redirect to `/login`, which explains the same; the account and list APIs answer 404 "coming soon". Partial or invalid settings log `account_settings_invalid` and also run with accounts off, so a broken setting never turns pages into errors. Other branch previews have no registration either, so they behave like Production.
+
+**Turning accounts on in Production.** No code change is needed; it is only Vercel Production settings, then a redeploy:
+
+1. Register Todo on the production issuer with callback `https://todo-app.royeradames.com/api/auth/federation/callback` and sign-out address `https://todo-app.royeradames.com/account`.
+2. Set `AUTH_BASE_URL=https://todo-app.royeradames.com`, `AUTH_ISSUER_URL=https://accounts.royeradames.com/api/auth`, the issued `AUTH_CLIENT_ID` and sensitive `AUTH_CLIENT_SECRET`, and a fresh sensitive `AUTH_SECRET`.
+3. Attach a Production database as `DATABASE_URL` and `DATABASE_URL_UNPOOLED`, and apply the reviewed migrations to it with `npm run db:migrate`.
+
+Until all of these exist, Production keeps saying accounts are coming soon. Only Preview deployments send the Vercel OIDC token that the protected preview issuer's Trusted Sources rule needs; Production sends none to the public issuer.
 
 ## Database
 
@@ -37,13 +47,13 @@ Todo owns `todo_lists` and `todo_items`, foreign-keyed to immutable local user I
 
 - `npm run typecheck`, `npm run lint`, `npm test`: types, static checks, list/HTTP/configuration regressions.
 - `npm run test:integration` with `TODO_RUN_DATABASE_TESTS=1`: real PostgreSQL ownership, concurrency and cascade checks in a disposable schema.
-- `npm run test:browser`: the public demo, keyboard and narrow screens (`TODO_TEST_PORT` overrides 4325).
-- `npm run build`, then `node scripts/verify-production-boundary.mjs`: unconfigured accounts and data fail closed.
+- `npm run test:browser`: the browser list with accounts on, keyboard and narrow screens (`TODO_TEST_PORT` overrides 4325).
+- `npm run build`, then `npm run test:production`: the production build with no issuer, registration or database. Account routes never 500 and say accounts are coming soon, the APIs answer 404 without cookies, and the whole browser-list journey works (add, complete, filter, delete, clear, mouse and keyboard reordering, reload, theme) with no console errors (`TODO_PRODUCTION_TEST_PORT` overrides 4327).
 - `npm run test:browser`: also covers an unreachable issuer and store (sign-in alert, retry page, callback page instead of JSON) and a crafted return path, using closed local ports.
 - `npm run test:hosted`: the real central journey on the protected previews with synthetic `@sink.accounts-preview.test` accounts: sign-in, saved list, 409 refresh across tabs, another account's isolation, sign-out in another tab, expired callback, 400px pages, local and central sign-out. The **Hosted Todo journey** workflow runs it after each Preview deploy of the registered branch, then `scripts/cleanup-hosted-accounts.mjs` removes every `todo-suite-` account from both databases. Its secrets live only on the branch-limited `hosted-preview` GitHub environment.
 
 ## Design and operation
 
-Official starter: `frontendmentorio/todo-app` at `ab67102eff4ea8c9aa616038660fc811eb72255d`. Supplied source stills are in `reference/design`, images in `public/images`. The demo is a design exercise with no fake signed-in profile. Theme is the only browser-persisted preference; real tasks belong to the database.
+Official starter: `frontendmentorio/todo-app` at `ab67102eff4ea8c9aa616038660fc811eb72255d`. Supplied source stills are in `reference/design`, images in `public/images`. Layout, spacing, icons, check circles, hover-revealed delete and the separate mobile filter card follow the official design. Two deliberate deviations: text is at least 16px (the design uses 12–14px), and muted, completed and accent colours are adjusted just enough to reach 4.5:1 contrast.
 
-See `docs/security-contract.md` for privacy, routing and assurance boundaries. Keyboard shortcuts adapt the existing Royer UI guard pattern in a small utility; N focuses a new task, ? opens help and Escape closes it. Native controls perform every task without shortcuts or dragging.
+See `docs/security-contract.md` for privacy, routing and assurance boundaries. Keyboard shortcuts adapt the existing Royer UI guard pattern in a small utility; N focuses a new task, ? opens help and Escape closes it. Drag a task with the mouse, or long-press and drag on touch. Alt with the up or down arrow moves the focused task and keeps focus on it, and "Reorder with buttons" shows move buttons for a single-pointer alternative.

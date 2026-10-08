@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { authSettings, AccountUnavailable } from "../../src/lib/auth-config";
+import {
+  accountMode,
+  needsTrustedSource,
+  authSettings,
+  AccountUnavailable,
+} from "../../src/lib/auth-config";
 
 const names = [
   "AUTH_BASE_URL",
@@ -67,3 +72,57 @@ test("missing or weak secrets and client registration fail closed", () =>
     process.env.AUTH_SECRET = "too-short";
     assert.throws(authSettings, AccountUnavailable);
   }));
+
+const complete = {
+  AUTH_BASE_URL: "https://todo.example.com",
+  AUTH_SECRET: "synthetic-test-configuration-only-32-characters",
+  AUTH_ISSUER_URL: "https://accounts.example.com/api/auth",
+  AUTH_CLIENT_ID: "synthetic-client",
+  AUTH_CLIENT_SECRET: "synthetic-client-secret",
+  DATABASE_URL: "postgresql://synthetic@127.0.0.1:9/unavailable",
+};
+
+test("with no issuer registration, accounts are off rather than broken", () => {
+  assert.equal(accountMode({}), "off");
+  // Production today: a base URL or secret alone does not mean an issuer exists.
+  assert.equal(
+    accountMode({
+      AUTH_BASE_URL: complete.AUTH_BASE_URL,
+      AUTH_SECRET: complete.AUTH_SECRET,
+      AUTH_ISSUER_URL: " ",
+    }),
+    "off",
+  );
+});
+
+test("a complete registration with storage turns accounts on", () => {
+  assert.equal(accountMode(complete), "on");
+  // Pointing Production at the production issuer is only a settings change.
+  assert.equal(
+    accountMode({
+      ...complete,
+      AUTH_BASE_URL: "https://todo-app.royeradames.com",
+      AUTH_ISSUER_URL: "https://accounts.royeradames.com/api/auth",
+    }),
+    "on",
+  );
+});
+
+test("partial or invalid account settings are reported, never half-enabled", () => {
+  for (const name of Object.keys(complete))
+    assert.equal(
+      accountMode({ ...complete, [name]: "" }),
+      "invalid",
+      `without ${name}`,
+    );
+  assert.equal(
+    accountMode({ ...complete, AUTH_ISSUER_URL: "https://accounts.example.com" }),
+    "invalid",
+  );
+});
+
+test("only Preview deployments send the Vercel token to the protected issuer", () => {
+  assert.equal(needsTrustedSource({ VERCEL: "1", VERCEL_ENV: "preview" }), true);
+  assert.equal(needsTrustedSource({ VERCEL: "1", VERCEL_ENV: "production" }), false);
+  assert.equal(needsTrustedSource({}), false);
+});

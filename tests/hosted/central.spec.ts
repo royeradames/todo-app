@@ -90,6 +90,10 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
   await createCentralAccount(page, owner);
   await signInToTodo(page, owner);
   await expect(page.getByText("Your list is clear. Add a task above.")).toBeVisible();
+  // Signed-in people never see the sign-in page.
+  await page.goto(todoOrigin + "/login?returnTo=%2Faccount");
+  await expect(page).toHaveURL(todoOrigin + "/account");
+  await page.goto(todoOrigin + "/todos");
   await page.screenshot({ path: "test-results-hosted/todos-empty-1440.png" });
   await add(page, "Synthetic central task");
   await page.reload();
