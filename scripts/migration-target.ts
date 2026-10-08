@@ -11,7 +11,7 @@ function directHost(value: string | undefined) {
   try { return value ? !new URL(value).hostname.includes("-pooler") : false; } catch { return false; }
 }
 
-export function migrationTarget(argv: string[], env: NodeJS.ProcessEnv = process.env) {
+export function migrationTarget(argv: string[], env: Readonly<Record<string, string | undefined>> = process.env) {
   const chosen = argv.find((value) => value.startsWith("--target="))?.split("=")[1] ?? "development";
   if (chosen !== "development" && chosen !== "production") throw new Error("Choose --target=development or --target=production.");
   const target = targets[chosen];
