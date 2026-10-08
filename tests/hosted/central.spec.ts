@@ -58,7 +58,7 @@ async function createCentralAccount(page: Page, account: Person) {
   await page.getByLabel("Confirm password", { exact: true }).fill(account.password);
   // Live requirements: the long synthetic phrase meets every rule.
   const rules = page.getByRole("list", { name: "Password requirements" });
-  await expect(rules.getByRole("listitem").first()).toContainText("met");
+  await expect(rules.getByRole("listitem").first()).toContainText(", met"); // not "not met yet"
   await expect(rules.getByRole("listitem").filter({ hasText: /not met/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Create account", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
