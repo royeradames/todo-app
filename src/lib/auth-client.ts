@@ -1,5 +1,6 @@
 "use client";
 import { z } from "zod";
+import { safeReturnPath } from "./return-path";
 
 const principalSchema = z
   .object({ id: z.string() })
@@ -7,18 +8,7 @@ const principalSchema = z
 
 /** Same-origin path only; anything else returns to the saved list. */
 export function returnPath(value: string | null) {
-  if (!value) return "/todos";
-  try {
-    const url = new URL(value, window.location.origin);
-    // Check the normalized path: "/.//host" normalizes to "//host".
-    return url.origin === window.location.origin &&
-      !url.pathname.startsWith("//") &&
-      !url.pathname.includes("\\")
-      ? `${url.pathname}${url.search}`
-      : "/todos";
-  } catch {
-    return "/todos";
-  }
+  return safeReturnPath(value, window.location.origin);
 }
 
 /** The principal this browser's Todo session belongs to, or null. */

@@ -10,3 +10,4 @@ playwright-report/
 *.tsbuildinfo
 vendor/superseded/
 test-results-hosted/
+test-results-production/
