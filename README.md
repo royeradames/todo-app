@@ -4,14 +4,14 @@ Private Frontend Mentor Todo implementation and the first central-mode `@royer/a
 
 ## Accounts
 
-Todo signs in through the central **Breakthrough account** (`@royer/auth` 0.1.0-rc.4, central mode). The issuer owns passwords, passkeys, authenticator codes, phone approval, verification mail and recovery. Todo owns only its local principals, sessions and lists. It never sees a password and sends no mail.
+Todo signs in through the central **Breakthrough account** (`@royer/auth` 0.1.0-rc.5, central mode). The issuer owns passwords, passkeys, authenticator codes, phone approval, verification mail and recovery. Todo owns only its local principals, sessions and lists. It never sees a password and sends no mail.
 
 - `/login` starts the sign-in at `POST /api/auth/federation/start`; the issuer returns the browser to `/api/auth/federation/callback`, then to the saved list.
 - Every protected read and write calls `getPrincipal`, which re-checks the live central session. Signing out of the issuer ends Todo's session on its next read.
 - "Sign out of Todo" ends Todo on this browser only. The central account stays signed in, so "Continue" returns without another password.
 - An unreachable issuer is a retry state (503), never a signed-out or signed-in guess.
 
-The pinned private package archive is `vendor/royer-auth-0.1.0-rc.4.tgz`, SHA-256 `22e5e9d13d4ee67bdd51f12f21043de59d3016ea6b1b1d2d3d1289a1226348d8`, the CI-built release of reviewed merge `a326496c221ab6a3ec81a2afc97099fee4e73702` (https://github.com/royeradames/royer-auth/releases/tag/v0.1.0-rc.4). This repository is private, so it keeps the archive instead of using the registry.
+The pinned private package archive is `vendor/royer-auth-0.1.0-rc.5.tgz`, SHA-256 `7a4cc4eb5c67446aa6145d94002ed8b111aa90a9228eb2ba60577a7df53ff730`, the CI-built release of reviewed merge `6c7066d64047011a9291bfa3b95ebab25e172bdf` (https://github.com/royeradames/royer-auth/releases/tag/v0.1.0-rc.5). rc.5 makes a doubled sign-in callback land signed in instead of on the expired page; it needs the `0003_rc5_federation` upgrade below. This repository is private, so it keeps the archive instead of using the registry.
 
 ## Configuration
 
@@ -39,7 +39,7 @@ Until all of these exist, Production keeps saying accounts are coming soon. Only
 
 ## Database
 
-`todo-development-db` (`rough-haze-94222851`) serves Development and Preview. `npm run db:plan` generates `migrations/0001_auth.sql` from the central-mode configuration without applying it. `npm run db:migrate -- --reviewed-sha256=HASH` initializes only that exact empty store in one transaction and records the migration. It never drops data. Applied October 7, 2026: combined SHA-256 `e9c155bb4859325ad8b6b925ed38182e2df0d7a39e8e401018af26520076f35d`.
+`todo-development-db` (`rough-haze-94222851`) serves Development and Preview. `npm run db:plan` generates `migrations/0001_auth.sql` from the central-mode configuration without applying it. `npm run db:migrate -- --reviewed-sha256=HASH` initializes only that exact empty store in one transaction and records the migration. It never drops data. Applied October 7, 2026: combined SHA-256 `e9c155bb4859325ad8b6b925ed38182e2df0d7a39e8e401018af26520076f35d`. Later additive upgrades live in `migrations/NNNN_name.sql`; `npm run db:upgrade -- NNNN_name --reviewed-sha256=HASH` applies one once and records it. `0003_rc5_federation` (SHA-256 `960058fbda45e9782241d67018b50189410f8857f8be5766d7723a39ff18fd72`) adds `federationTransaction.completedSessionId` and `claims` for rc.5; apply it before deploying rc.5.
 
 Todo owns `todo_lists` and `todo_items`, foreign-keyed to immutable local user IDs. A durable unique issuer-and-subject mapping creates each local principal; email is never a linking key. Every write holds the person's list lock and checks a version; conflicts return 409 and refresh. Reorder requires an exact owned-ID permutation.
 

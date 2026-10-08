@@ -243,12 +243,15 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
       landed.push(...targets.map((target) => target.pathname + target.search));
       await route.fulfill({ status: 302, headers: { location: targets[1].href } });
     });
-    await page.goto(todoOrigin + "/todos");
-    await page.getByRole("button", { name: "Continue with Breakthrough account" }).click();
-    await expect(page).toHaveURL(todoOrigin + "/todos");
-    await expect(page.getByText("Synthetic central task", { exact: true })).toBeVisible();
-    expect(landed, "both copies land on the list").toEqual(["/todos", "/todos"]);
-    await page.context().unroute(authorize);
+    try {
+      await page.goto(todoOrigin + "/todos");
+      await page.getByRole("button", { name: "Continue with Breakthrough account" }).click();
+      await expect(page).toHaveURL(todoOrigin + "/todos");
+      await expect(page.getByText("Synthetic central task", { exact: true })).toBeVisible();
+      expect(landed, "both copies land on the list").toEqual(["/todos", "/todos"]);
+    } finally {
+      await page.context().unroute(authorize);
+    }
   });
 
   await test.step("central sign-out ends the Todo session on its next read", async () => {
