@@ -54,10 +54,17 @@ async function createCentralAccount(page: Page, account: Person) {
     .locator("input")
     .and(page.getByLabel("Password", { exact: true }))
     .fill(account.password);
+  // royer-auth #10: every new-password form has a confirmation field.
+  await page.getByLabel("Confirm password", { exact: true }).fill(account.password);
+  // Live requirements: the long synthetic phrase meets every rule.
+  const rules = page.getByRole("list", { name: "Password requirements" });
+  await expect(rules.getByRole("listitem").first()).toContainText("met");
+  await expect(rules.getByRole("listitem").filter({ hasText: /not met/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Create account", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
   await page.goto(await verificationLink(account.email));
-  await expect(page).toHaveURL(/\/login/);
+  // royer-auth #11: the link lands on a readable "verified" page.
+  await expect(page.getByRole("heading", { name: "Your email is verified." })).toBeVisible();
 }
 /** Opens the saved list and signs in through the issuer's own screen. */
 async function signInToTodo(page: Page, account: Person) {
@@ -170,13 +177,19 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
   });
 
   await test.step("an expired callback shows the sign-in page, not raw JSON", async () => {
-    const other = await page.context().newPage();
+    // Signed in, a stale callback leaves the person signed in on their list.
+    const same = await page.context().newPage();
+    await same.goto(todoOrigin + "/api/auth/federation/callback?state=expired&code=expired");
+    await expect(same).toHaveURL(todoOrigin + "/todos");
+    await same.close();
+    // Signed out, it explains itself on the sign-in page.
+    const other = await newPage(browser);
     await other.goto(todoOrigin + "/api/auth/federation/callback?state=expired&code=expired");
     await expect(other).toHaveURL(todoOrigin + "/login?error=expired");
     await expect(other.locator("main [role=alert]")).toHaveText(
       "That sign-in expired or could not be verified. Please start again.",
     );
-    await other.close();
+    await other.context().close();
   });
 
   await test.step("signing out in another tab hides this tab's list", async () => {
