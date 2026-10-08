@@ -18,7 +18,9 @@ export default async function LoginPage({
         failure={
           error === "unavailable"
             ? "Your account could not be reached. Please try again in a moment."
-            : error === "expired"
+            : error === "linking"
+              ? "This account needs a quick review before it can open Todo. Ask the app owner to review it; starting again will not help."
+              : error === "expired"
               ? "That sign-in expired or could not be verified. Please start again."
               : null
         }

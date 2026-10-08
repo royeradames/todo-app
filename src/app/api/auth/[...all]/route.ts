@@ -9,7 +9,12 @@ const callbackPath = "/api/auth/federation/callback";
  * with a reason, keeping any cookies the handler cleared.
  */
 function callbackFailure(response: Response | null, origin: string) {
-  const reason = response?.status === 503 || !response ? "unavailable" : "expired";
+  const reason =
+    !response || response.status === 503
+      ? "unavailable"
+      : response.status === 409
+        ? "linking"
+        : "expired";
   const headers = new Headers({
     location: new URL(`/login?error=${reason}`, origin).href,
     "cache-control": "private, no-store",

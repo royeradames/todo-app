@@ -445,11 +445,6 @@ h3 {
   display: grid;
   gap: 0.75rem;
 }
-.qr {
-  margin: 1rem auto;
-  border: 8px solid #fff;
-  border-radius: 5px;
-}
 .device-code {
   font-family: monospace;
   font-size: 2rem;
