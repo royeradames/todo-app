@@ -6,11 +6,14 @@ import { configureAuth } from "../src/lib/auth-config";
 const connectionString = process.env.DATABASE_URL_UNPOOLED;
 if (!connectionString || new URL(connectionString).hostname.includes("-pooler"))
   throw new Error("Use the configured direct development connection.");
+// Planning reads the schema only; it never contacts the issuer, so the
+// client registration may be a placeholder here.
+process.env.AUTH_ISSUER_URL ??= "https://accounts-preview.royeradames.com/api/auth";
+process.env.AUTH_CLIENT_ID ??= "migration-planning-only";
+process.env.AUTH_CLIENT_SECRET ??= "migration-planning-only";
 const pool = new Pool({ connectionString, max: 1 });
 try {
-  const auth = configureAuth(pool, async () => {
-    throw new Error("Migration planning never sends mail.");
-  });
+  const auth = configureAuth(pool);
   const plan = await getMigrations(auth.engine.options);
   if (plan.unsafeChanges.length || plan.schemaProblems.length)
     throw new Error("Review the schema mismatch before migration.");

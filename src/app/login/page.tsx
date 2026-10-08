@@ -1,5 +1,6 @@
 import { AuthShell } from "@/components/auth-shell";
 import { Login } from "@/components/login";
+export const metadata = { title: "Sign in" };
 export default async function LoginPage({
   searchParams,
 }: {
@@ -9,8 +10,8 @@ export default async function LoginPage({
   return (
     <AuthShell
       eyebrow="Welcome back"
-      title="A familiar way in."
-      description="One account for this app, with a password, a passkey, or approval from a device you already trust."
+      title="Your tasks, on every device."
+      description="One Breakthrough account opens Todo and the other apps in the family. Your list stays private to you."
     >
       <Login returnTo={returnTo || null} />
     </AuthShell>

@@ -1,18 +1,16 @@
-create table "user" ("id" text not null primary key, "name" text not null, "email" text not null unique, "emailVerified" boolean not null, "image" text, "createdAt" timestamptz default CURRENT_TIMESTAMP not null, "updatedAt" timestamptz default CURRENT_TIMESTAMP not null, "username" text unique, "displayUsername" text, "twoFactorEnabled" boolean, "credentialEpoch" integer);
+create table "user" ("id" text not null primary key, "name" text not null, "email" text not null unique, "emailVerified" boolean not null, "image" text, "createdAt" timestamptz default CURRENT_TIMESTAMP not null, "updatedAt" timestamptz default CURRENT_TIMESTAMP not null);
 
-create table "session" ("id" text not null primary key, "expiresAt" timestamptz not null, "token" text not null unique, "createdAt" timestamptz default CURRENT_TIMESTAMP not null, "updatedAt" timestamptz not null, "ipAddress" text, "userAgent" text, "userId" text not null references "user" ("id") on delete cascade, "assurance" text);
+create table "session" ("id" text not null primary key, "expiresAt" timestamptz not null, "token" text not null unique, "createdAt" timestamptz default CURRENT_TIMESTAMP not null, "updatedAt" timestamptz not null, "ipAddress" text, "userAgent" text, "userId" text not null references "user" ("id") on delete cascade);
 
 create table "account" ("id" text not null primary key, "accountId" text not null, "providerId" text not null, "userId" text not null references "user" ("id") on delete cascade, "accessToken" text, "refreshToken" text, "idToken" text, "accessTokenExpiresAt" timestamptz, "refreshTokenExpiresAt" timestamptz, "scope" text, "password" text, "createdAt" timestamptz default CURRENT_TIMESTAMP not null, "updatedAt" timestamptz not null);
 
 create table "verification" ("id" text not null primary key, "identifier" text not null, "value" text not null, "expiresAt" timestamptz not null, "createdAt" timestamptz default CURRENT_TIMESTAMP not null, "updatedAt" timestamptz default CURRENT_TIMESTAMP not null);
 
-create table "passkey" ("id" text not null primary key, "name" text, "publicKey" text not null, "userId" text not null references "user" ("id") on delete cascade, "credentialID" text not null, "counter" integer not null, "deviceType" text not null, "backedUp" boolean not null, "transports" text, "createdAt" timestamptz, "aaguid" text);
+create table "federationTransaction" ("id" text not null primary key, "state" text not null unique, "binding" text not null, "verifier" text not null, "nonce" text not null, "returnPath" text not null, "expiresAt" timestamptz not null);
 
-create table "twoFactor" ("id" text not null primary key, "secret" text not null, "backupCodes" text not null, "userId" text not null references "user" ("id") on delete cascade, "verified" boolean, "failedVerificationCount" integer, "lockedUntil" timestamptz);
+create table "federationIdentity" ("id" text not null primary key, "issuer" text not null, "subject" text not null, "userId" text not null references "user" ("id") on delete cascade);
 
-create table "deviceCode" ("id" text not null primary key, "deviceCode" text not null, "userCode" text not null, "userId" text, "expiresAt" timestamptz not null, "status" text not null, "lastPolledAt" timestamptz, "pollingInterval" integer, "clientId" text, "scope" text, "approverSessionId" text);
-
-create table "totpUse" ("id" text not null primary key, "key" text not null unique, "userId" text not null references "user" ("id") on delete cascade, "expiresAt" timestamptz not null);
+create table "federationGrant" ("id" text not null primary key, "sessionId" text not null unique references "session" ("id") on delete cascade, "issuer" text not null, "subject" text not null, "sid" text not null, "accessToken" text not null, "expiresAt" timestamptz not null);
 
 create table "rateLimit" ("id" text not null primary key, "key" text not null unique, "count" integer not null, "lastRequest" bigint not null);
 
@@ -22,16 +20,10 @@ create index "account_userId_idx" on "account" ("userId");
 
 create index "verification_identifier_idx" on "verification" ("identifier");
 
-create index "passkey_userId_idx" on "passkey" ("userId");
+create index "federationTransaction_expiresAt_idx" on "federationTransaction" ("expiresAt");
 
-create index "passkey_credentialID_idx" on "passkey" ("credentialID");
+create index "federationGrant_expiresAt_idx" on "federationGrant" ("expiresAt");
 
-create index "twoFactor_secret_idx" on "twoFactor" ("secret");
+create unique index "federationIdentity_issuer_subject_uidx" on "federationIdentity" ("issuer", "subject");
 
-create index "twoFactor_userId_idx" on "twoFactor" ("userId");
-
-create index "totpUse_expiresAt_idx" on "totpUse" ("expiresAt");
-
-create unique index "deviceCode_deviceCode_uidx" on "deviceCode" ("deviceCode");
-
-create unique index "deviceCode_userCode_uidx" on "deviceCode" ("userCode");
+create index "federationGrant_issuer_sid_idx" on "federationGrant" ("issuer", "sid");

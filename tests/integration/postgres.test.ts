@@ -4,12 +4,11 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { Pool } from "pg";
 import { z } from "zod";
-import { configureAuth, type AuthMail } from "../../src/lib/auth-config";
 import { createTodoStore, TodoConflict } from "../../src/lib/todos/store";
 
 const allowed = process.env.TODO_RUN_DATABASE_TESTS === "1";
 test(
-  "real PostgreSQL: verified principals own separate durable lists and concurrent writes conflict",
+  "real PostgreSQL: principals own separate durable lists and concurrent writes conflict",
   { skip: !allowed, timeout: 60000 },
   async () => {
     assert.equal(
@@ -56,99 +55,27 @@ test(
         )
       ).join("\n");
       await database.query(sql);
-      const messages: Array<AuthMail & { kind: string }> = [];
-      const auth = configureAuth(database, async (kind, mail) => {
-        messages.push({ ...mail, kind });
-      });
-      const origin = "http://localhost:4325";
-      function browser() {
-        const cookies = new Map<string, string>();
-        return {
-          headers() {
-            return new Headers({
-              cookie: [...cookies]
-                .map(([key, value]) => `${key}=${value}`)
-                .join("; "),
-            });
-          },
-          async request(path: string, body?: unknown) {
-            const headers = this.headers();
-            headers.set("origin", origin);
-            if (body !== undefined)
-              headers.set("content-type", "application/json");
-            const response = await auth.handler(
-              new Request(new URL(`/api/auth${path}`, origin), {
-                method: body === undefined ? "GET" : "POST",
-                headers,
-                ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-              }),
-            );
-            for (const cookie of response.headers.getSetCookie()) {
-              const pair = cookie.split(";")[0],
-                separator = pair.indexOf("=");
-              const key = pair.slice(0, separator),
-                value = pair.slice(separator + 1);
-              if (value) cookies.set(key, value);
-              else cookies.delete(key);
-            }
-            return response;
-          },
-        };
-      }
-      const first = browser(),
-        second = browser();
-      const identity = (index: number) => ({
-        name: `Synthetic Todo ${index}`,
-        email: `todo-${randomUUID()}@example.test`,
-        password: randomUUID() + " synthetic passphrase",
-      });
-      const a = identity(1),
-        b = identity(2);
-      for (const [person, account] of [
-        [first, a],
-        [second, b],
-      ] as const) {
-        assert.equal(
-          (await person.request("/sign-up/email", account)).status,
-          200,
-          "Synthetic signup succeeds",
+      // Central mode creates local principals at the federation callback.
+      // The store only needs two immutable principal IDs, so insert them.
+      const person = async (index: number) => {
+        const id = `synthetic-${randomUUID()}`;
+        await database.query(
+          'INSERT INTO "user" (id, name, email, "emailVerified", "updatedAt") VALUES ($1, $2, $3, true, now())',
+          [id, `Synthetic Todo ${index}`, `todo-${randomUUID()}@example.test`],
         );
-        assert.equal(
-          await auth.getPrincipal(person.headers()),
-          null,
-          "Unverified signup has no product principal",
-        );
-        const message = messages.findLast(
-          (mail) =>
-            mail.user.email === account.email && mail.kind === "verification",
-        );
-        assert.ok(message, "Verification callback receives a message");
-        const url = new URL(message.url);
-        assert.ok(
-          [200, 302].includes(
-            (
-              await person.request(
-                url.pathname.replace("/api/auth", "") + url.search,
-              )
-            ).status,
-          ),
-          "Verification link succeeds",
-        );
-        assert.equal(
-          (
-            await person.request("/sign-in/email", {
-              email: account.email,
-              password: account.password,
-            })
-          ).status,
-          200,
-          "Verified login succeeds",
-        );
-      }
-      const owner = await auth.getPrincipal(first.headers()),
-        other = await auth.getPrincipal(second.headers());
-      assert.ok(owner);
-      assert.ok(other);
+        return { id };
+      };
+      const owner = await person(1),
+        other = await person(2);
+      const federationTables = await database.query(
+        "SELECT tablename FROM pg_tables WHERE schemaname=$1 AND tablename LIKE 'federation%' ORDER BY 1",
+        [schema],
+      );
+      assert.deepEqual(
+        federationTables.rows.map((row) => row.tablename),
+        ["federationGrant", "federationIdentity", "federationTransaction"],
+        "The reviewed migration creates the central sign-in tables",
+      );
       assert.notEqual(owner.id, other.id);
       const store = createTodoStore(database);
       assert.deepEqual(await store.read(owner.id), { version: 0, items: [] });
@@ -200,38 +127,21 @@ test(
         persisted.items.map((item) => item.id).reverse(),
         "Deferrable positions allow a real SQL reorder",
       );
+      await database.query('DELETE FROM "user" WHERE id=$1', [owner.id]);
       assert.equal(
         (
-          await first.request("/request-password-reset", {
-            email: a.email,
-            redirectTo: `${origin}/reset-password`,
-          })
-        ).status,
-        200,
-      );
-      const recovery = messages.findLast(
-        (mail) => mail.kind === "recovery" && mail.user.email === a.email,
-      );
-      assert.ok(recovery);
-      const token = new URL(recovery.url).pathname.split("/").at(-1);
-      assert.equal(
-        (
-          await browser().request("/reset-password", {
-            token,
-            newPassword: randomUUID() + " new synthetic passphrase",
-          })
-        ).status,
-        200,
+          await database.query(
+            "SELECT count(*)::int AS count FROM todo_items WHERE owner_id=$1",
+            [owner.id],
+          )
+        ).rows[0].count,
+        0,
+        "Removing a principal removes its tasks",
       );
       assert.equal(
-        await auth.getPrincipal(first.headers()),
-        null,
-        "Password recovery invalidates old sessions",
-      );
-      assert.deepEqual(
-        await store.read(owner.id),
-        reversed,
-        "Recovery keeps the same owner's task data",
+        (await store.read(other.id)).version,
+        0,
+        "Removing one principal leaves another list untouched",
       );
       const count = await setup.query(
         "SELECT count(*)::int AS count FROM pg_tables WHERE schemaname=$1",

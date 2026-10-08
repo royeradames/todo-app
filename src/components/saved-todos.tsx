@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { authClient, checkResult } from "@/lib/auth-client";
+import { currentAccountId, signOutOfTodo } from "@/lib/auth-client";
 import { requestTodos, TodoApiError } from "@/lib/todos/client";
 import type { TodoCommand } from "@/lib/todos/model";
 import { TodoList } from "./todo-list";
@@ -13,9 +13,14 @@ export function SavedTodos({ ownerId }: { ownerId: string }) {
   const alive = useRef(true);
   const [notice, setNotice] = useState("");
   const [signedOut, setSignedOut] = useState(false);
-  const currentSession = authClient.useSession();
+  // Another tab can sign out or switch accounts; recheck on focus.
+  const currentSession = useQuery({
+    queryKey: ["account"],
+    queryFn: ({ signal }) => currentAccountId(signal),
+    refetchOnWindowFocus: true,
+  });
   const accountChanged =
-    !currentSession.isPending && currentSession.data?.user.id !== ownerId;
+    currentSession.isSuccess && currentSession.data !== ownerId;
   const currentAccount = useRef(ownerId);
   useEffect(() => {
     currentAccount.current = accountChanged ? "" : ownerId;
@@ -71,7 +76,7 @@ export function SavedTodos({ ownerId }: { ownerId: string }) {
     client.removeQueries({ queryKey: key });
     setSignedOut(true);
     try {
-      checkResult(await authClient.signOut());
+      await signOutOfTodo();
       window.location.assign(new URL("/login", window.location.origin).href);
     } catch {
       setNotice("Could not finish signing out. Please try again.");
@@ -121,7 +126,7 @@ export function SavedTodos({ ownerId }: { ownerId: string }) {
       }
       tools={
         <>
-          <Link href="/account">Account security</Link>
+          <Link href="/account">Account</Link>
           <button
             disabled={mutation.isPending || query.isFetching}
             onClick={() => void query.refetch()}

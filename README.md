@@ -1,39 +1,45 @@
 # Todo
 
-Private Frontend Mentor Todo implementation and first isolated `@royer/auth` consumer. Public `/` is a fictional, tab-only demo. `/todos` is each signed-in person's durable list. There is no automatic demo import or shared family account database.
+Private Frontend Mentor Todo implementation and the first central-mode `@royer/auth` consumer. Public `/` is a fictional, tab-only demo. `/todos` is each signed-in person's durable list. There is no automatic demo import or shared family account database.
 
-## Current state
+## Accounts
 
-Source is being prepared. PostgreSQL migration, all auth journeys, deployment and real email delivery must pass their checks before real accounts are enabled. The account package's original tests used SQLite, so PostgreSQL support is an explicit consumer gate, not an assumed result.
+Todo signs in through the central **Breakthrough account** (`@royer/auth` 0.1.0-rc.3, central mode). The issuer owns passwords, passkeys, authenticator codes, phone approval, verification mail and recovery. Todo owns only its local principals, sessions and lists. It never sees a password and sends no mail.
 
-## Local development
+- `/login` starts the sign-in at `POST /api/auth/federation/start`; the issuer returns the browser to `/api/auth/federation/callback`, then to the saved list.
+- Every protected read and write calls `getPrincipal`, which re-checks the live central session. Signing out of the issuer ends Todo's session on its next read.
+- "Sign out of Todo" ends Todo on this browser only. The central account stays signed in, so "Continue" returns without another password.
+- An unreachable issuer is a retry state (503), never a signed-out or signed-in guess.
 
-Use Node 24.11.1, `npm ci`, then `npm run dev` at `http://localhost:4325`. Credentials belong only in the ignored, mode-0600 `.env.local`. The coordinator supplies the development connection. Never print, commit or copy that file into artifacts.
+The pinned private package archive is `vendor/royer-auth-0.1.0-rc.3.tgz`, SHA-256 `b1e672fa2d548289c9601f8849a88338eed7d8341653182e8be427c6e4b10a2e`, the CI-built release of reviewed merge `0db56bf1119af71c88664b585b9235de040d84b8` (https://github.com/royeradames/royer-auth/releases/tag/v0.1.0-rc.3). This repository is private, so it keeps the archive instead of using the registry.
 
-The pinned private package archive is `vendor/royer-auth-0.1.0-rc.3.tgz`, SHA-256 `b1e672fa2d548289c9601f8849a88338eed7d8341653182e8be427c6e4b10a2e`, the CI-built release of reviewed merge `0db56bf1119af71c88664b585b9235de040d84b8` (https://github.com/royeradames/royer-auth/releases/tag/v0.1.0-rc.3). It replaces defective rc.1. Do not publish this repository or its dependency. Auth handlers stay in the package. The account components adapt its reference client UI.
+## Configuration
 
-`AUTH_BASE_URL` must be an exact HTTPS origin, or loopback HTTP for development. `AUTH_SECRET` is unique and at least 32 random characters. Runtime uses the pooled `DATABASE_URL`; migrations use `DATABASE_URL_UNPOOLED`. Production additionally needs `RESEND_API_KEY` and an approved `AUTH_EMAIL_FROM`. Missing account configuration fails closed.
+| Variable | Meaning |
+| --- | --- |
+| `AUTH_BASE_URL` | Todo's exact HTTPS origin (loopback HTTP for development). Requests from any other host are refused. |
+| `AUTH_SECRET` | Todo's own random secret, at least 32 characters. |
+| `AUTH_ISSUER_URL` | The issuer's exact origin plus `/api/auth`, today `https://accounts-preview.royeradames.com/api/auth`. |
+| `AUTH_CLIENT_ID`, `AUTH_CLIENT_SECRET` | Issued once by the issuer operator for Todo's exact callback and sign-out addresses. |
+| `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | Pooled runtime and direct migration connections. |
 
-Local synthetic verification requires all three: nonproduction mode, loopback origin and `TODO_LOCAL_TEST_MAIL=1`. Only `@example.test` mail enters its bounded in-memory test mailbox. `/api/test-mail` is 404 outside that mode. It is a test harness, not a recovery route. No code inbox is available in Preview or Production.
+Missing configuration fails closed. On Vercel, each issuer request carries a fresh Vercel OIDC token in `x-vercel-trusted-oidc-idp-token`, which the protected issuer admits through its **Trusted Sources** rule for this project's Preview deployments. Credentials live only in Vercel and `.env.local`; never print or commit them.
 
-## First schema
+**Preview.** The protected Preview of `feat/todo-auth-foundation` is registered at `https://todo-app-git-feat-todo-auth-foundation-royer-adames-projects.vercel.app`; its settings are scoped to that branch. A different stable origin needs its own client registration. The issuer refuses Vercel Production, so Todo Production has no account settings and its account routes fail closed until a production issuer exists.
 
-The only assigned store is the new Free `todo-development-db` (`rough-haze-94222851`), connected to Vercel Development. There is no Preview or Production account store yet.
+## Database
 
-1. `npm run db:plan` uses the direct connection for metadata and generates `migrations/0001_auth.sql`; it does not apply SQL. Review this and `0002_todos.sql`, plus the combined SHA-256.
-2. Only after coordinator review, `npm run db:migrate -- --reviewed-sha256=HASH` initializes the exact empty development store in one transaction with a migration record. It refuses existing public tables and checks the resource identity. It never drops data.
-3. Apply schema before new code serves accounts. A failed transaction rolls back. After success, preserve the database; do not run down migrations or roll back to an incompatible auth package. Hosted release needs a provider recovery point and a separate reviewed rollout.
+`todo-development-db` (`rough-haze-94222851`) serves Development and Preview. `npm run db:plan` generates `migrations/0001_auth.sql` from the central-mode configuration without applying it. `npm run db:migrate -- --reviewed-sha256=HASH` initializes only that exact empty store in one transaction and records the migration. It never drops data. Applied October 7, 2026: combined SHA-256 `e9c155bb4859325ad8b6b925ed38182e2df0d7a39e8e401018af26520076f35d`.
 
-Auth owns credentials, sessions and assurance tables. Todo owns `todo_lists` and `todo_items`, foreign-keyed to immutable text user IDs. Every product request checks the server principal. Every write holds the person's list lock and checks a version; conflicts return 409 and refresh, never silently overwrite. Reorder requires an exact owned-ID permutation; filtered movement preserves hidden items.
+Todo owns `todo_lists` and `todo_items`, foreign-keyed to immutable local user IDs. A durable unique issuer-and-subject mapping creates each local principal; email is never a linking key. Every write holds the person's list lock and checks a version; conflicts return 409 and refresh. Reorder requires an exact owned-ID permutation.
 
 ## Checks
 
-- `npm run typecheck`, `npm run lint`, `npm test`: types, static checks, pure list/body/config regressions.
-- `npm run test:integration`: synthetic PostgreSQL package and task ownership/concurrency checks, only after the reviewed development migration.
-- `npm run test:browser`: real local account/UI journeys with disposable synthetic records. No real mail or existing records.
-- `npm run build`, production dependency audit, then production-mode no-test-mail/auth fail-closed check.
-
-Acceptance includes verification/login/recovery/session invalidation, virtual passkey user verification, true TOTP and one-use backup codes, requester-bound phone approval, per-account persistence, stale-tab conflicts, offline feedback and native keyboard/filter/reorder behavior. Physical biometrics and phone cameras, real mail delivery, backups and hosted abuse controls remain separate release checks.
+- `npm run typecheck`, `npm run lint`, `npm test`: types, static checks, list/HTTP/configuration regressions.
+- `npm run test:integration` with `TODO_RUN_DATABASE_TESTS=1`: real PostgreSQL ownership, concurrency and cascade checks in a disposable schema.
+- `npm run test:browser`: the public demo, keyboard and narrow screens (`TODO_TEST_PORT` overrides 4325).
+- `npm run build`, then `node scripts/verify-production-boundary.mjs`: unconfigured accounts and data fail closed.
+- `npm run test:hosted`: the real central journey on the protected previews with synthetic `@sink.accounts-preview.test` accounts. It needs `TODO_PREVIEW_URL`, `TODO_PREVIEW_BYPASS`, `ACCOUNTS_PREVIEW_BYPASS` and `AUTH_PREVIEW_SINK_TOKEN` in the runner's environment. Remove the `todo-suite-` accounts afterwards from both databases.
 
 ## Design and operation
 

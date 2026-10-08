@@ -2,22 +2,36 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { authSettings, AccountUnavailable } from "../../src/lib/auth-config";
 
-test("auth config requires an exact origin and keeps the local mailbox out of production", () => {
-  const names = [
-    "AUTH_BASE_URL",
-    "AUTH_SECRET",
-    "TODO_LOCAL_TEST_MAIL",
-    "NODE_ENV",
-    "RESEND_API_KEY",
-    "AUTH_EMAIL_FROM",
-  ];
+const names = [
+  "AUTH_BASE_URL",
+  "AUTH_SECRET",
+  "AUTH_ISSUER_URL",
+  "AUTH_CLIENT_ID",
+  "AUTH_CLIENT_SECRET",
+];
+function withEnvironment(run: () => void) {
   const before = new Map(names.map((name) => [name, process.env[name]]));
   try {
+    process.env.AUTH_BASE_URL = "https://todo.example.com";
     process.env.AUTH_SECRET = "synthetic-test-configuration-only-32-characters";
-    Object.assign(process.env, { NODE_ENV: "test" });
-    process.env.TODO_LOCAL_TEST_MAIL = "1";
-    delete process.env.RESEND_API_KEY;
-    delete process.env.AUTH_EMAIL_FROM;
+    process.env.AUTH_ISSUER_URL = "https://accounts.example.com/api/auth";
+    process.env.AUTH_CLIENT_ID = "synthetic-client";
+    process.env.AUTH_CLIENT_SECRET = "synthetic-client-secret";
+    run();
+  } finally {
+    for (const [name, value] of before) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+}
+
+test("central sign-in requires exact app and issuer origins", () =>
+  withEnvironment(() => {
+    const settings = authSettings();
+    assert.equal(settings.baseURL, "https://todo.example.com");
+    assert.equal(settings.issuerURL, "https://accounts.example.com/api/auth");
+    assert.equal(settings.issuerOrigin, "https://accounts.example.com");
     for (const invalid of [
       "http://todo.example.com",
       "https://todo.example.com/path",
@@ -26,19 +40,30 @@ test("auth config requires an exact origin and keeps the local mailbox out of pr
       "https://todo.example.com#fragment",
     ]) {
       process.env.AUTH_BASE_URL = invalid;
-      assert.throws(authSettings, AccountUnavailable);
+      assert.throws(authSettings, AccountUnavailable, invalid);
     }
     process.env.AUTH_BASE_URL = "http://localhost:4325";
-    assert.equal(authSettings().testMail, true);
-    Object.assign(process.env, { NODE_ENV: "production" });
-    assert.throws(authSettings, AccountUnavailable);
-    process.env.RESEND_API_KEY = "synthetic-not-a-real-provider-key";
-    process.env.AUTH_EMAIL_FROM = "Todo <test@example.invalid>";
-    assert.equal(authSettings().testMail, false);
-  } finally {
-    for (const [name, value] of before) {
-      if (value === undefined) delete process.env[name];
-      else process.env[name] = value;
+    assert.equal(authSettings().baseURL, "http://localhost:4325");
+    for (const invalid of [
+      "http://accounts.example.com/api/auth",
+      "https://accounts.example.com",
+      "https://accounts.example.com/api/auth/",
+      "https://accounts.example.com/other",
+      "https://accounts.example.com/api/auth?x=1",
+    ]) {
+      process.env.AUTH_ISSUER_URL = invalid;
+      assert.throws(authSettings, AccountUnavailable, invalid);
     }
-  }
-});
+  }));
+
+test("missing or weak secrets and client registration fail closed", () =>
+  withEnvironment(() => {
+    for (const name of names) {
+      const value = process.env[name];
+      delete process.env[name];
+      assert.throws(authSettings, AccountUnavailable, name);
+      process.env[name] = value;
+    }
+    process.env.AUTH_SECRET = "too-short";
+    assert.throws(authSettings, AccountUnavailable);
+  }));

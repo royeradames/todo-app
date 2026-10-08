@@ -1,4 +1,7 @@
 import { defineConfig } from "@playwright/test";
+// The public demo needs no account or database. Override the port when 4325 is taken.
+const port = process.env.TODO_TEST_PORT ?? "4325";
+const origin = `http://localhost:${port}`;
 export default defineConfig({
   testDir: "./tests/browser",
   fullyParallel: false,
@@ -7,7 +10,7 @@ export default defineConfig({
   expect: { timeout: 20000 },
   reporter: "line",
   use: {
-    baseURL: "http://localhost:4325",
+    baseURL: origin,
     channel: "chrome",
     headless: true,
     screenshot: "off",
@@ -15,11 +18,11 @@ export default defineConfig({
     video: "off",
   },
   webServer: {
-    command: "npm run dev",
-    url: "http://localhost:4325",
+    command: `next dev --hostname 127.0.0.1 --port ${port}`,
+    url: origin,
     timeout: 120000,
     reuseExistingServer: false,
-    env: { TODO_LOCAL_TEST_MAIL: "1", NEXT_TELEMETRY_DISABLED: "1" },
+    env: { NEXT_TELEMETRY_DISABLED: "1" },
     stdout: "ignore",
     stderr: "pipe",
   },

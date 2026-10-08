@@ -31,11 +31,11 @@ const server = spawn(
       NEXT_TELEMETRY_DISABLED: "1",
       AUTH_BASE_URL: origin,
       AUTH_SECRET: randomBytes(32).toString("hex"),
-      TODO_LOCAL_TEST_MAIL: "1",
       DATABASE_URL: "",
       DATABASE_URL_UNPOOLED: "",
-      RESEND_API_KEY: "",
-      AUTH_EMAIL_FROM: "",
+      AUTH_ISSUER_URL: "",
+      AUTH_CLIENT_ID: "",
+      AUTH_CLIENT_SECRET: "",
     },
     stdio: ["ignore", log.fd, log.fd],
     detached: true,
@@ -77,10 +77,8 @@ try {
     JSON.stringify(
       {
         passed: true,
-        packageReleaseHold: true,
         databaseConfigured: false,
-        mailConfigured: false,
-        localMailFlagStillSet: true,
+        issuerConfigured: false,
         checks: result,
         time: new Date().toISOString(),
       },
@@ -89,7 +87,7 @@ try {
     ),
   );
   console.log(
-    "Production boundary passed: public demo, hidden test mail, unconfigured auth/data fail closed.",
+    "Production boundary passed: public demo, no test mail route, unconfigured auth/data fail closed.",
   );
 } finally {
   if (server.exitCode === null && server.pid) {
