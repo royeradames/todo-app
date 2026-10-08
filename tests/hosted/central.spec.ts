@@ -177,13 +177,19 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
   });
 
   await test.step("an expired callback shows the sign-in page, not raw JSON", async () => {
-    const other = await page.context().newPage();
+    // Signed in, a stale callback leaves the person signed in on their list.
+    const same = await page.context().newPage();
+    await same.goto(todoOrigin + "/api/auth/federation/callback?state=expired&code=expired");
+    await expect(same).toHaveURL(todoOrigin + "/todos");
+    await same.close();
+    // Signed out, it explains itself on the sign-in page.
+    const other = await newPage(browser);
     await other.goto(todoOrigin + "/api/auth/federation/callback?state=expired&code=expired");
     await expect(other).toHaveURL(todoOrigin + "/login?error=expired");
     await expect(other.locator("main [role=alert]")).toHaveText(
       "That sign-in expired or could not be verified. Please start again.",
     );
-    await other.close();
+    await other.context().close();
   });
 
   await test.step("signing out in another tab hides this tab's list", async () => {
