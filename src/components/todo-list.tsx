@@ -235,7 +235,10 @@ export function TodoList({
         )}
         <div className="list-footer">
           <span>
-            {items.filter((item) => !item.completed).length} items left
+            {(() => {
+              const left = items.filter((item) => !item.completed).length;
+              return `${left} ${left === 1 ? "item" : "items"} left`;
+            })()}
           </span>
           <div className="filters" aria-label="Filter tasks">
             {(["all", "active", "completed"] satisfies TodoFilter[]).map(

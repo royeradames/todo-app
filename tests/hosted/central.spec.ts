@@ -94,6 +94,7 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
   await add(page, "Synthetic central task");
   await page.reload();
   await expect(page.getByText("Synthetic central task", { exact: true })).toBeVisible();
+  await expect(page.getByText("1 item left", { exact: true })).toBeVisible();
   for (const [width, height] of [[400, 860], [768, 1024], [1440, 900]]) {
     await page.setViewportSize({ width, height });
     expect(

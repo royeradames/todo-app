@@ -4,14 +4,14 @@ Private Frontend Mentor Todo implementation and the first central-mode `@royer/a
 
 ## Accounts
 
-Todo signs in through the central **Breakthrough account** (`@royer/auth` 0.1.0-rc.3, central mode). The issuer owns passwords, passkeys, authenticator codes, phone approval, verification mail and recovery. Todo owns only its local principals, sessions and lists. It never sees a password and sends no mail.
+Todo signs in through the central **Breakthrough account** (`@royer/auth` 0.1.0-rc.4, central mode). The issuer owns passwords, passkeys, authenticator codes, phone approval, verification mail and recovery. Todo owns only its local principals, sessions and lists. It never sees a password and sends no mail.
 
 - `/login` starts the sign-in at `POST /api/auth/federation/start`; the issuer returns the browser to `/api/auth/federation/callback`, then to the saved list.
 - Every protected read and write calls `getPrincipal`, which re-checks the live central session. Signing out of the issuer ends Todo's session on its next read.
 - "Sign out of Todo" ends Todo on this browser only. The central account stays signed in, so "Continue" returns without another password.
 - An unreachable issuer is a retry state (503), never a signed-out or signed-in guess.
 
-The pinned private package archive is `vendor/royer-auth-0.1.0-rc.3.tgz`, SHA-256 `b1e672fa2d548289c9601f8849a88338eed7d8341653182e8be427c6e4b10a2e`, the CI-built release of reviewed merge `0db56bf1119af71c88664b585b9235de040d84b8` (https://github.com/royeradames/royer-auth/releases/tag/v0.1.0-rc.3). This repository is private, so it keeps the archive instead of using the registry.
+The pinned private package archive is `vendor/royer-auth-0.1.0-rc.4.tgz`, SHA-256 `22e5e9d13d4ee67bdd51f12f21043de59d3016ea6b1b1d2d3d1289a1226348d8`, the CI-built release of reviewed merge `a326496c221ab6a3ec81a2afc97099fee4e73702` (https://github.com/royeradames/royer-auth/releases/tag/v0.1.0-rc.4). This repository is private, so it keeps the archive instead of using the registry.
 
 ## Configuration
 
