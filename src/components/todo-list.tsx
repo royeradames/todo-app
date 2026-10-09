@@ -265,7 +265,7 @@ export function TodoList({
   );
 
   return (
-    <main id="main" className="todo-main">
+    <main id="main" className="todo-main" data-loading={loading ? "" : undefined}>
       <header className="todo-heading">
         <h1>Todo</h1>
         <button
