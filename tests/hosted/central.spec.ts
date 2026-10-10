@@ -1,92 +1,10 @@
-import { test, expect, type Browser, type Page } from "@playwright/test";
-import { randomBytes } from "node:crypto";
+import { test, expect } from "@playwright/test";
 import { z } from "zod";
-import { accountsOrigin, authorizePreviews, readSink, todoOrigin } from "./hosted-env";
-
-// Synthetic Breakthrough accounts. Reserved .test recipients go to the
-// issuer's preview sink, never to a real inbox. Every address starts with
-// "todo-suite-" so the cleanup step can find and remove them.
-const run = Date.now().toString(36) + randomBytes(3).toString("hex");
-function person(label: string) {
-  return {
-    name: "Todo Suite " + label,
-    username: "todosuite" + label + run,
-    email: "todo-suite-" + label + "-" + run + "@sink.accounts-preview.test",
-    password: "A synthetic Todo phrase " + randomBytes(6).toString("hex"),
-  };
-}
-type Person = ReturnType<typeof person>;
-const mailSchema = z.object({
-  messages: z.array(z.object({ subject: z.string(), text: z.string() })),
-});
-
-async function newPage(browser: Browser) {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  await authorizePreviews(context);
-  return context.newPage();
-}
-async function verificationLink(email: string) {
-  let link = "";
-  await expect
-    .poll(
-      async () => {
-        const response = await readSink(email);
-        if (response.status !== 200) return false;
-        const message = mailSchema
-          .parse(await response.json())
-          .messages.find((item) => item.subject === "Verify your Breakthrough account");
-        link = /https:\/\/\S+/.exec(message?.text ?? "")?.[0] ?? "";
-        return Boolean(link);
-      },
-      { message: "Waiting for the verification message", timeout: 30_000 },
-    )
-    .toBe(true);
-  expect(new URL(link).origin, "Mail links stay on the issuer").toBe(accountsOrigin);
-  return link;
-}
-/** Creates and verifies a central account directly on the issuer. */
-async function createCentralAccount(page: Page, account: Person) {
-  await page.goto(accountsOrigin + "/create-account");
-  await page.getByLabel("Name", { exact: true }).fill(account.name);
-  await page.getByLabel("Username", { exact: true }).fill(account.username);
-  await page.getByLabel("Email", { exact: true }).fill(account.email);
-  await page
-    .locator("input")
-    .and(page.getByLabel("Password", { exact: true }))
-    .fill(account.password);
-  // royer-auth #10: every new-password form has a confirmation field.
-  await page.getByLabel("Confirm password", { exact: true }).fill(account.password);
-  // Live requirements: the long synthetic phrase meets every rule.
-  const rules = page.getByRole("list", { name: "Password requirements" });
-  await expect(rules.getByRole("listitem").first()).toContainText(", met"); // not "not met yet"
-  await expect(rules.getByRole("listitem").filter({ hasText: /not met/ })).toHaveCount(0);
-  await page.getByRole("button", { name: "Create account", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
-  await page.goto(await verificationLink(account.email));
-  // royer-auth #11: the link lands on a readable "verified" page.
-  await expect(page.getByRole("heading", { name: "Your email is verified." })).toBeVisible();
-}
-/** Opens the saved list and signs in through the issuer's own screen. */
-async function signInToTodo(page: Page, account: Person) {
-  await page.goto(todoOrigin + "/todos");
-  await expect(page).toHaveURL(todoOrigin + "/login?returnTo=%2Ftodos");
-  await page.getByRole("button", { name: "Continue with Breakthrough account" }).click();
-  await expect(page).toHaveURL((url) => url.origin === accountsOrigin && url.pathname === "/login");
-  await page.getByLabel("Username or email").fill(account.username);
-  await page
-    .locator("input")
-    .and(page.getByLabel("Password", { exact: true }))
-    .fill(account.password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page).toHaveURL(todoOrigin + "/todos");
-}
-async function add(page: Page, title: string) {
-  await page.getByLabel("Create a new todo").fill(title);
-  await page.getByRole("button", { name: "Add task", exact: true }).click();
-  await expect(page.getByText(title, { exact: true })).toBeVisible();
-}
+import { accountsOrigin, todoOrigin } from "./hosted-env";
+import { add, createCentralAccount, newPage, person, removeCreatedAccounts, signInToTodo } from "./accounts";
 
 test.describe.configure({ mode: "serial" });
+test.afterAll(removeCreatedAccounts);
 
 test("a Breakthrough account signs in to Todo, keeps a private list and signs out", async ({
   browser,

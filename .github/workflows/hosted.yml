@@ -1,5 +1,5 @@
 name: Hosted Todo journey
-# Runs the synthetic central sign-in journey against the protected Todo
+# Runs the synthetic sign-up, sign-in and sign-out journeys against the protected Todo
 # preview after each successful preview deployment of the registered branch,
 # or on demand.
 on:
@@ -41,8 +41,10 @@ jobs:
   hosted:
     needs: target
     if: needs.target.outputs.run == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # GitHub-hosted jobs are refused by billing, so the journeys run on the
+    # self-hosted Mac like the pull request gate; CI_RUNNER=hosted moves them back.
+    runs-on: ${{ vars.CI_RUNNER == 'hosted' && 'ubuntu-latest' || fromJSON('["self-hosted","macOS","royer-ci"]') }}
+    timeout-minutes: 30
     # Secrets live on this branch-limited environment, not the repository.
     environment: hosted-preview
     env:
@@ -69,12 +71,15 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24.11.1
-          cache: npm
+          cache: ${{ runner.environment == 'github-hosted' && 'npm' || '' }}
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # Self-hosted Macs already have Google Chrome in /Applications.
+      - name: Install Chrome for Playwright
+        if: runner.environment == 'github-hosted'
+        run: npx playwright install --with-deps chrome
       - run: npm run test:hosted
         env:
-          PLAYWRIGHT_CHANNEL: chromium
+          PLAYWRIGHT_CHANNEL: chrome
           TODO_PREVIEW_BYPASS: ${{ secrets.TODO_PREVIEW_BYPASS }}
           ACCOUNTS_PREVIEW_BYPASS: ${{ secrets.ACCOUNTS_PREVIEW_BYPASS }}
           AUTH_PREVIEW_SINK_TOKEN: ${{ secrets.AUTH_PREVIEW_SINK_TOKEN }}

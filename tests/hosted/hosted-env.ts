@@ -47,10 +47,18 @@ export async function authorizePreviews(context: BrowserContext) {
 }
 
 /** Reads the issuer's synthetic preview mailbox. Failures never echo secrets. */
-export async function readSink(address: string) {
+export function readSink(address: string) {
+  return sink(address, "GET");
+}
+/** Removes a synthetic .test account and its sink mail from the issuer. */
+export function removeSyntheticAccount(address: string) {
+  return sink(address, "DELETE");
+}
+async function sink(address: string, method: "GET" | "DELETE") {
   const url = new URL("/api/preview-mail?to=" + encodeURIComponent(address), accountsOrigin);
   try {
     return await fetch(url, {
+      method,
       headers: {
         "x-vercel-protection-bypass": secrets.get(accountsOrigin) ?? "",
         authorization: "Bearer " + sinkToken,
