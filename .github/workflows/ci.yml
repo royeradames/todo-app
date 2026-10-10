@@ -1,0 +1,67 @@
+# The pull request gate: types, lint, unit and setup checks, the browser list
+# against `next dev` with an unreachable issuer, the production build, and
+# the production journey against `next start` with no issuer or database.
+# The hosted central sign-in journey stays in hosted.yml, after each Preview
+# deploy of the registered branch.
+#
+# Runner: Royer's self-hosted macOS runner on Mac2 (label royer-ci), because
+# GitHub-hosted jobs are refused by billing. The runner holds one heavy lane
+# for the whole job and serves the Playwright web servers on its own port
+# (CI_PORT). Fallback: set the repository variable CI_RUNNER to "hosted" to
+# run on ubuntu-latest again; no workflow change is needed.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ${{ vars.CI_RUNNER == 'hosted' && 'ubuntu-latest' || fromJSON('["self-hosted","macOS","royer-ci"]') }}
+    # Includes waiting for a free lane on the shared Mac.
+    timeout-minutes: 60
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Port for this runner
+        run: |
+          port="${CI_PORT:-8930}"
+          if lsof -nP -iTCP:"$port" -sTCP:LISTEN > /dev/null 2>&1; then echo "Port $port is already in use."; exit 1; fi
+          echo "CI_PORT=$port" >> "$GITHUB_ENV"
+          echo "TODO_TEST_PORT=$port" >> "$GITHUB_ENV"
+          echo "TODO_PRODUCTION_TEST_PORT=$port" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.11.1
+          cache: ${{ runner.environment == 'github-hosted' && 'npm' || '' }}
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      # Self-hosted Macs already have Google Chrome in /Applications.
+      - name: Install Chrome for Playwright
+        if: runner.environment == 'github-hosted'
+        run: npx playwright install --with-deps chrome
+      - run: npm run test:browser
+      - run: npm run build
+      - run: npm run test:production
+        env:
+          PLAYWRIGHT_CHANNEL: chrome
+      # Playwright stops its web servers; this catches one left by a cancelled run.
+      - name: Stop any server left on this runner's port
+        if: always() && env.CI_PORT != ''
+        run: |
+          pids=$(lsof -t -nP -iTCP:"$CI_PORT" -sTCP:LISTEN 2>/dev/null || true)
+          if [ -n "$pids" ]; then kill $pids 2>/dev/null || true; fi
