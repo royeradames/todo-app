@@ -1,4 +1,4 @@
-import { z } from "zod/mini";
+import * as z from "zod/mini";
 
 export const maxTodos = 500;
 export const todoSchema = z.object({

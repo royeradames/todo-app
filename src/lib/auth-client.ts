@@ -1,5 +1,5 @@
 "use client";
-import { z } from "zod/mini";
+import * as z from "zod/mini";
 import { safeReturnPath } from "./return-path";
 
 const principalSchema = z.nullable(z.object({ id: z.string() }));

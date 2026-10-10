@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
-import { z } from "zod/mini";
+import * as z from "zod/mini";
 import {
   applyCommand,
   snapshotSchema,

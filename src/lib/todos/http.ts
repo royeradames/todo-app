@@ -1,4 +1,4 @@
-import { z } from "zod/mini";
+import * as z from "zod/mini";
 import { mutationSchema } from "./model";
 export class BadTodoRequest extends Error {
   constructor(
