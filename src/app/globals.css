@@ -192,6 +192,15 @@ a:focus-visible {
   box-shadow: var(--shadow);
   overflow: clip;
 }
+/* The browser's list is unknown on the server. Reveal the content below it
+   after loading so it never paints above the tasks and then jumps downward.
+   Without scripting, keep the existing explanation and footer visible. */
+@media (scripting: enabled) {
+  .todo-main[data-loading] :is(.save-state, .reorder-hint, .list-tools, .account-links),
+  .todo-main[data-loading] ~ .site-footer {
+    visibility: hidden;
+  }
+}
 .tasks {
   margin: 0;
   padding: 0;
