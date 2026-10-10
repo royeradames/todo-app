@@ -1,39 +1,36 @@
-import { z } from "zod";
+import { z } from "zod/mini";
 
 export const maxTodos = 500;
 export const todoSchema = z.object({
   id: z.uuid(),
-  title: z.string().trim().min(1).max(500),
+  title: z.string().check(z.trim(), z.minLength(1), z.maxLength(500)),
   completed: z.boolean(),
 });
 export type Todo = z.infer<typeof todoSchema>;
 export const snapshotSchema = z.object({
-  version: z.number().int().nonnegative().safe(),
-  items: z.array(todoSchema).max(maxTodos),
+  version: z.int().check(z.nonnegative()),
+  items: z.array(todoSchema).check(z.maxLength(maxTodos)),
 });
 export type TodoSnapshot = z.infer<typeof snapshotSchema>;
 export const commandSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("add"), title: todoSchema.shape.title }).strict(),
-  z
-    .object({
-      kind: z.literal("complete"),
-      id: z.uuid(),
-      completed: z.boolean(),
-    })
-    .strict(),
-  z.object({ kind: z.literal("remove"), id: z.uuid() }).strict(),
-  z.object({ kind: z.literal("clear-completed") }).strict(),
-  z
-    .object({
-      kind: z.literal("reorder"),
-      ids: z.array(z.uuid()).max(maxTodos),
-    })
-    .strict(),
+  z.strictObject({ kind: z.literal("add"), title: todoSchema.shape.title }),
+  z.strictObject({
+    kind: z.literal("complete"),
+    id: z.uuid(),
+    completed: z.boolean(),
+  }),
+  z.strictObject({ kind: z.literal("remove"), id: z.uuid() }),
+  z.strictObject({ kind: z.literal("clear-completed") }),
+  z.strictObject({
+    kind: z.literal("reorder"),
+    ids: z.array(z.uuid()).check(z.maxLength(maxTodos)),
+  }),
 ]);
 export type TodoCommand = z.infer<typeof commandSchema>;
-export const mutationSchema = z
-  .object({ version: snapshotSchema.shape.version, command: commandSchema })
-  .strict();
+export const mutationSchema = z.strictObject({
+  version: snapshotSchema.shape.version,
+  command: commandSchema,
+});
 export type TodoFilter = "all" | "active" | "completed";
 export class InvalidTodoChange extends Error {}
 
