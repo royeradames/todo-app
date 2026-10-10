@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod/mini";
 import { snapshotSchema, type TodoCommand } from "./model";
 export class TodoApiError extends Error {
   constructor(
@@ -43,8 +43,8 @@ export async function requestTodos(
             ? "Your list changed in another tab. Review the refreshed list and try again."
             : ambiguous,
       );
-    const data = snapshotSchema
-      .extend({ ownerId: z.string() })
+    const data = z
+      .extend(snapshotSchema, { ownerId: z.string() })
       .parse(await response.json());
     if (data.ownerId !== ownerId)
       throw new TodoApiError(401, "Your account changed. Sign in again.");

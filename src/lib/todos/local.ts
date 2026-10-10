@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod/mini";
 import { maxTodos, todoSchema, type Todo } from "./model";
 
 /**
@@ -10,8 +10,12 @@ const storedSchema = z.object({
   version: z.literal(1),
   items: z
     .array(todoSchema)
-    .max(maxTodos)
-    .refine((items) => new Set(items.map((item) => item.id)).size === items.length),
+    .check(
+      z.maxLength(maxTodos),
+      z.refine(
+        (items) => new Set(items.map((item) => item.id)).size === items.length,
+      ),
+    ),
 });
 
 export function readLocalList(raw: string | null): Todo[] | null {

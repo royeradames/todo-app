@@ -1,10 +1,8 @@
 "use client";
-import { z } from "zod";
+import * as z from "zod/mini";
 import { safeReturnPath } from "./return-path";
 
-const principalSchema = z
-  .object({ id: z.string() })
-  .nullable();
+const principalSchema = z.nullable(z.object({ id: z.string() }));
 
 /** Same-origin path only; anything else returns to the saved list. */
 export function returnPath(value: string | null) {

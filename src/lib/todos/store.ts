@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
-import { z } from "zod";
+import * as z from "zod/mini";
 import {
   applyCommand,
   snapshotSchema,
@@ -9,7 +9,7 @@ import {
 } from "./model";
 
 export class TodoConflict extends Error {}
-const versionSchema = z.object({ version: z.number().int().nonnegative() });
+const versionSchema = z.object({ version: z.int().check(z.nonnegative()) });
 async function snapshot(
   client: PoolClient,
   ownerId: string,

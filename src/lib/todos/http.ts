@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod/mini";
 import { mutationSchema } from "./model";
 export class BadTodoRequest extends Error {
   constructor(
@@ -50,7 +50,7 @@ export async function readTodoMutation(request: Request, origin: string) {
     );
   } catch (error) {
     if (
-      error instanceof z.ZodError ||
+      error instanceof z.core.$ZodError ||
       error instanceof SyntaxError ||
       error instanceof TypeError
     )
