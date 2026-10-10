@@ -29,6 +29,9 @@ export async function removeCreatedAccounts() {
   created.clear();
 }
 
+/** Cross-origin sign-in hops wake cold preview functions on both sides; give them longer. */
+export const handoff = { timeout: 60_000 };
+
 export async function newPage(browser: Browser) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   await authorizePreviews(context);
@@ -107,7 +110,7 @@ export async function createCentralAccount(page: Page, account: Person) {
 /** From Todo's sign-in page to the issuer's, through the button's busy state. */
 export async function continueToIssuer(page: Page) {
   await page.getByRole("button", { name: "Continue with Breakthrough account" }).click();
-  await expect(page).toHaveURL((url) => url.origin === accountsOrigin && url.pathname === "/login");
+  await expect(page).toHaveURL((url) => url.origin === accountsOrigin && url.pathname === "/login", handoff);
 }
 /**
  * Signs in with the password on the issuer's own screen. A browser this account
@@ -121,12 +124,18 @@ export async function passwordOnIssuer(page: Page, account: Person) {
     .and(page.getByLabel("Password", { exact: true }))
     .fill(account.password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page).toHaveURL((url) => !(url.origin === accountsOrigin && url.pathname === "/login"));
-  if (new URL(page.url()).pathname !== "/verify-device") return;
+  // Reads the committed address only. A URL predicate (toHaveURL or waitForURL)
+  // stalled the page on this cross-site hop in Playwright 1.63.
+  await expect
+    .poll(() => { const url = new URL(page.url()); return url.origin === accountsOrigin && url.pathname === "/login"; }, handoff)
+    .toBe(false);
+  const step = new URL(page.url()).pathname;
+  if (step !== "/verify-device") return step;
   await expect(page.getByRole("heading", { name: "Confirm this browser" })).toBeVisible();
   const code = sixDigitCode(await readMail(account.email, "Confirm a new browser for your Breakthrough account", seen));
   await page.getByLabel("Email code", { exact: true }).fill(code);
   await page.getByRole("button", { name: "Confirm and sign in", exact: true }).click();
+  return step;
 }
 /** Opens the saved list and signs in through the issuer's own screen. */
 export async function signInToTodo(page: Page, account: Person) {
@@ -134,7 +143,7 @@ export async function signInToTodo(page: Page, account: Person) {
   await expect(page).toHaveURL(todoOrigin + "/login?returnTo=%2Ftodos");
   await continueToIssuer(page);
   await passwordOnIssuer(page, account);
-  await expect(page).toHaveURL(todoOrigin + "/todos");
+  await expect(page).toHaveURL(todoOrigin + "/todos", handoff);
 }
 export async function add(page: Page, title: string) {
   await page.getByLabel("Create a new todo").fill(title);

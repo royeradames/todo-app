@@ -1,6 +1,6 @@
 {
   "app": "todo-app",
-  "explain": "Todo runs with no settings: without an issuer registration it keeps each list in the browser and says accounts are coming soon. These settings turn on Breakthrough account sign-in and the saved list in Production. The Preview registration is scoped to the feat/todo-auth-foundation branch, which this doctor does not read.",
+  "explain": "Todo runs with no settings: without an issuer registration it keeps each list in the browser and says accounts are coming soon. These settings turn on Breakthrough account sign-in and the saved list in Production. The Preview registration is scoped to the feat/todo-account-journeys branch, which this doctor does not read.",
   "vercelProject": "todo-app",
   "scope": "royer-adames-projects",
   "env": [

@@ -6,6 +6,7 @@ import { accountsOrigin, todoOrigin } from "./hosted-env";
 import {
   add,
   continueToIssuer,
+  handoff,
   fillSignUp,
   mailMark,
   newPage,
@@ -30,7 +31,7 @@ let member: Person;
 let home: Page;
 
 async function signedInToList(page: Page) {
-  await expect(page).toHaveURL(todoOrigin + "/todos");
+  await expect(page).toHaveURL(todoOrigin + "/todos", handoff);
   await expect(page.getByText(task, { exact: true })).toBeVisible();
 }
 /** A fresh browser that has never signed in, opened at Todo's saved list. */
@@ -73,20 +74,19 @@ test("sign up: a new visitor creates a Breakthrough account from Todo's home pag
   await home.screenshot({ path: "test-results-hosted/journey-todo-login-1440.png", fullPage: true });
 
   await test.step("the sign-in button shows it is busy and stays pressable", async () => {
-    let release = () => {};
-    const held = new Promise<void>((resolve) => (release = resolve));
-    await home.route(todoOrigin + "/api/auth/federation/start", async (route) => {
-      await held;
-      await route.fallback();
+    // Watch the real request rather than delay it: the button reports each
+    // busy moment before the browser leaves for the account page.
+    const busy: Array<{ text: string; disabled: boolean }> = [];
+    await home.exposeFunction("reportSignInBusy", (state: { text: string; disabled: boolean }) => busy.push(state));
+    await home.getByRole("button", { name: "Continue with Breakthrough account" }).evaluate((button: HTMLButtonElement) => {
+      const report = (window as unknown as { reportSignInBusy: (state: { text: string; disabled: boolean }) => void }).reportSignInBusy;
+      new MutationObserver(() => {
+        if (button.getAttribute("aria-busy") === "true") report({ text: button.textContent ?? "", disabled: button.disabled });
+      }).observe(button, { attributes: true, childList: true, subtree: true, characterData: true });
     });
-    const button = home.getByRole("button", { name: "Continue with Breakthrough account" });
-    await button.click();
-    const busy = home.getByRole("button", { name: "Opening your account…" });
-    await expect(busy).toHaveAttribute("aria-busy", "true");
-    await expect(busy).toBeEnabled();
-    release();
-    await expect(home).toHaveURL((url) => url.origin === accountsOrigin && url.pathname === "/login");
-    await home.unroute(todoOrigin + "/api/auth/federation/start");
+    await continueToIssuer(home);
+    expect(busy.length, "The button showed a busy state").toBeGreaterThan(0);
+    expect(busy[0]).toEqual({ text: "Opening your account…", disabled: false });
   });
 
   await expect(home.getByRole("tablist", { name: "Sign-in method" })).toBeVisible();
@@ -98,7 +98,7 @@ test("sign up: a new visitor creates a Breakthrough account from Todo's home pag
   await home.getByRole("link", { name: "Continue to sign in" }).click();
   await expect(home).toHaveURL((url) => url.origin === accountsOrigin && url.pathname === "/login");
   await passwordOnIssuer(home, member);
-  await expect(home).toHaveURL(todoOrigin + "/todos");
+  await expect(home).toHaveURL(todoOrigin + "/todos", handoff);
   await expect(home.getByText("Your list is clear. Add a task above.")).toBeVisible();
   await add(home, task);
   await home.screenshot({ path: "test-results-hosted/journey-saved-list-1440.png", fullPage: true });
@@ -128,7 +128,7 @@ test("log out: signing out of Todo keeps the account; signing out of the account
 test("log in with a password from a new browser", async ({ browser }) => {
   const page = await freshAtSignIn(browser);
   // This browser is new to the account, so the issuer also emails a code.
-  await passwordOnIssuer(page, member);
+  expect(await passwordOnIssuer(page, member)).toBe("/verify-device");
   await signedInToList(page);
   await page.context().close();
 });
