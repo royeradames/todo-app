@@ -9,6 +9,7 @@ import {
   handoff,
   fillSignUp,
   mailMark,
+  nameIssuerRateLimit,
   newPage,
   openVerification,
   passwordOnIssuer,
@@ -16,6 +17,7 @@ import {
   readMail,
   removeCreatedAccounts,
   sixDigitCode,
+  waitForHydrated,
   type Person,
 } from "./accounts";
 
@@ -23,6 +25,7 @@ import {
 // previews: sign-up, sign-out, and each sign-in option the Breakthrough
 // account offers. One synthetic account per run; it is removed afterwards.
 test.describe.configure({ mode: "serial" });
+test.afterEach(({}, testInfo) => nameIssuerRateLimit(testInfo));
 test.afterAll(removeCreatedAccounts);
 
 const task = "Synthetic journey task";
@@ -34,6 +37,10 @@ async function signedInToList(page: Page) {
   await expect(page).toHaveURL(todoOrigin + "/todos", handoff);
   await expect(page.getByText(task, { exact: true })).toBeVisible();
 }
+/** Clicks a control once React has hydrated it. */
+async function press(locator: ReturnType<Page["getByRole"]>) {
+  await (await waitForHydrated(locator)).click();
+}
 /** A fresh browser that has never signed in, opened at Todo's saved list. */
 async function freshAtSignIn(browser: Browser) {
   const page = await newPage(browser);
@@ -44,7 +51,7 @@ async function freshAtSignIn(browser: Browser) {
 }
 async function issuerSignOut(page: Page) {
   await page.goto(accountsOrigin + "/account");
-  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await press(page.getByRole("button", { name: "Sign out", exact: true }));
   await expect(page).toHaveURL((url) => url.origin === accountsOrigin && url.pathname === "/login");
 }
 /** Decodes the rendered approval QR from pixels, as a phone camera would. */
@@ -69,7 +76,7 @@ test("sign up: a new visitor creates a Breakthrough account from Todo's home pag
   member = person("j");
   home = await newPage(browser);
   await home.goto(todoOrigin + "/");
-  await home.getByRole("link", { name: "Sign in to keep your tasks on every device" }).click();
+  await press(home.getByRole("link", { name: "Sign in to keep your tasks on every device" }));
   await expect(home).toHaveURL(todoOrigin + "/login?returnTo=%2Ftodos");
   await home.screenshot({ path: "test-results-hosted/journey-todo-login-1440.png", fullPage: true });
 
@@ -78,7 +85,7 @@ test("sign up: a new visitor creates a Breakthrough account from Todo's home pag
     // busy moment before the browser leaves for the account page.
     const busy: Array<{ text: string; disabled: boolean }> = [];
     await home.exposeFunction("reportSignInBusy", (state: { text: string; disabled: boolean }) => busy.push(state));
-    await home.getByRole("button", { name: "Continue with Breakthrough account" }).evaluate((button: HTMLButtonElement) => {
+    await (await waitForHydrated(home.getByRole("button", { name: "Continue with Breakthrough account" }))).evaluate((button: HTMLButtonElement) => {
       const report = (window as unknown as { reportSignInBusy: (state: { text: string; disabled: boolean }) => void }).reportSignInBusy;
       new MutationObserver(() => {
         if (button.getAttribute("aria-busy") === "true") report({ text: button.textContent ?? "", disabled: button.disabled });
@@ -91,7 +98,7 @@ test("sign up: a new visitor creates a Breakthrough account from Todo's home pag
 
   await expect(home.getByRole("tablist", { name: "Sign-in method" })).toBeVisible();
   await home.screenshot({ path: "test-results-hosted/journey-issuer-login-1440.png", fullPage: true });
-  await home.getByRole("link", { name: "Create an account" }).click();
+  await press(home.getByRole("link", { name: "Create an account" }));
   await expect(home).toHaveURL((url) => url.origin === accountsOrigin && url.pathname === "/create-account");
   await fillSignUp(home, member);
   await openVerification(home, member);
@@ -102,22 +109,38 @@ test("sign up: a new visitor creates a Breakthrough account from Todo's home pag
   await expect(home.getByText("Your list is clear. Add a task above.")).toBeVisible();
   await add(home, task);
   await home.screenshot({ path: "test-results-hosted/journey-saved-list-1440.png", fullPage: true });
+
+  await test.step("signed in, /login redirects on the server, so it never paints", async () => {
+    // Pitfall SI1: the sign-in page must not flash for someone already signed in.
+    const painted: string[] = [];
+    const record = (frame: import("@playwright/test").Frame) => {
+      if (frame === home.mainFrame()) painted.push(new URL(frame.url()).pathname);
+    };
+    home.on("framenavigated", record);
+    const response = await home.goto(todoOrigin + "/login?returnTo=%2Ftodos");
+    home.off("framenavigated", record);
+    expect(response?.url()).toBe(todoOrigin + "/todos");
+    const hop = response?.request().redirectedFrom();
+    expect(hop && new URL(hop.url()).pathname, "the first response for /login is an HTTP redirect").toBe("/login");
+    expect(painted, "no document for /login was committed").not.toContain("/login");
+    await expect(home.getByText(task, { exact: true })).toBeVisible();
+  });
 });
 
 test("log out: signing out of Todo keeps the account; signing out of the account ends Todo too", async () => {
   await home.goto(todoOrigin + "/account");
-  await home.getByRole("button", { name: "Sign out of Todo" }).click();
+  await press(home.getByRole("button", { name: "Sign out of Todo" }));
   await expect(home).toHaveURL(/\/login/);
   expect((await home.request.get(todoOrigin + "/api/todos")).status()).toBe(401);
   // The Breakthrough account is still signed in, so returning takes one press.
   await home.goto(todoOrigin + "/todos");
-  await home.getByRole("button", { name: "Continue with Breakthrough account" }).click();
+  await press(home.getByRole("button", { name: "Continue with Breakthrough account" }));
   await signedInToList(home);
 
   await home.goto(todoOrigin + "/account");
   await home.getByRole("link", { name: "Manage your Breakthrough account" }).click();
   await expect(home).toHaveURL(accountsOrigin + "/account");
-  await home.getByRole("button", { name: "Sign out", exact: true }).click();
+  await press(home.getByRole("button", { name: "Sign out", exact: true }));
   await expect(home).toHaveURL((url) => url.origin === accountsOrigin && url.pathname === "/login");
   // Todo re-checks the account on its next read, so the list is closed too.
   await home.goto(todoOrigin + "/todos");
@@ -135,8 +158,8 @@ test("log in with a password from a new browser", async ({ browser }) => {
 
 test("log in with an emailed sign-in code", async ({ browser }) => {
   const page = await freshAtSignIn(browser);
-  await page.getByRole("tab", { name: "Email code", exact: true }).click();
-  await page.getByLabel("Account email", { exact: true }).fill(member.email);
+  await press(page.getByRole("tab", { name: "Email code", exact: true }));
+  await (await waitForHydrated(page.getByLabel("Account email", { exact: true }))).fill(member.email);
   const seen = await mailMark(member.email);
   await page.getByRole("button", { name: "Send sign-in code", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Check your email.", exact: true })).toBeVisible();
@@ -160,28 +183,28 @@ test("log in with a passkey", async () => {
       hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true,
     },
   });
-  await home.getByRole("button", { name: "Add a passkey" }).click();
+  await press(home.getByRole("button", { name: "Add a passkey" }));
   await expect(home.getByText("Your passkey is ready to use.")).toBeVisible();
   await issuerSignOut(home);
 
   await home.goto(todoOrigin + "/todos");
   await continueToIssuer(home);
-  await home.getByRole("tab", { name: "Passkey", exact: true }).click();
-  await home.getByRole("button", { name: "Continue with a passkey" }).click();
+  await press(home.getByRole("tab", { name: "Passkey", exact: true }));
+  await press(home.getByRole("button", { name: "Continue with a passkey" }));
   await signedInToList(home);
 });
 
 test("log in by approving the request on a signed-in phone", async ({ browser }) => {
   // `home` is signed in to the account (passkey); it plays the phone.
   const page = await freshAtSignIn(browser);
-  await page.getByRole("tab", { name: "Phone approval", exact: true }).click();
-  await page.getByRole("button", { name: "Create approval code" }).click();
+  await press(page.getByRole("tab", { name: "Phone approval", exact: true }));
+  await press(page.getByRole("button", { name: "Create approval code" }));
   const code = (await page.getByTestId("device-code").innerText()).trim();
   await page.screenshot({ path: "test-results-hosted/journey-phone-approval-1440.png", fullPage: true });
   await home.goto(await scanApprovalQr(page, code));
-  await home.getByRole("button", { name: "Review request" }).click();
+  await press(home.getByRole("button", { name: "Review request" }));
   await expect(home.getByRole("heading", { name: "Is this your request?" })).toBeVisible();
-  await home.getByLabel("Number shown on the other device").fill((await page.getByTestId("match-number").innerText()).trim());
+  await (await waitForHydrated(home.getByLabel("Number shown on the other device"))).fill((await page.getByTestId("match-number").innerText()).trim());
   await home.getByRole("button", { name: "Approve sign-in" }).click();
   await expect(home.getByRole("heading", { name: "You can return to the other device." })).toBeVisible();
   await signedInToList(page);
@@ -190,7 +213,7 @@ test("log in by approving the request on a signed-in phone", async ({ browser })
 
 test("log in with a password and an authenticator code", async ({ browser }) => {
   await home.goto(accountsOrigin + "/account");
-  await home.getByLabel("Confirm current password").fill(member.password);
+  await (await waitForHydrated(home.getByLabel("Confirm current password"))).fill(member.password);
   await home.getByRole("button", { name: "Set up authenticator" }).click();
   await home.getByText("Cannot scan? Show setup key").click();
   const secret = await home.getByTestId("totp-secret").innerText();
@@ -207,7 +230,7 @@ test("log in with a password and an authenticator code", async ({ browser }) => 
   await expect(page).toHaveURL((url) => url.origin === accountsOrigin && url.pathname === "/two-factor");
   // A code is accepted once; wait for the next one after enrollment.
   await expect.poll(() => totp.generate(), { timeout: 35_000, intervals: [250] }).not.toBe(enrollment);
-  await page.getByLabel("Authenticator code", { exact: true }).fill(totp.generate());
+  await (await waitForHydrated(page.getByLabel("Authenticator code", { exact: true }))).fill(totp.generate());
   await page.getByRole("button", { name: "Verify and sign in" }).click();
   await signedInToList(page);
   await page.context().close();

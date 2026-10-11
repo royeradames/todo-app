@@ -1,9 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { z } from "zod";
 import { accountsOrigin, todoOrigin } from "./hosted-env";
-import { add, createCentralAccount, newPage, person, removeCreatedAccounts, signInToTodo } from "./accounts";
+import { add, createCentralAccount, nameIssuerRateLimit, newPage, person, removeCreatedAccounts, signInToTodo, waitForHydrated } from "./accounts";
 
 test.describe.configure({ mode: "serial" });
+test.afterEach(({}, testInfo) => nameIssuerRateLimit(testInfo));
 test.afterAll(removeCreatedAccounts);
 
 test("a Breakthrough account signs in to Todo, keeps a private list and signs out", async ({
@@ -60,7 +61,7 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
     await stale.goto(todoOrigin + "/todos");
     await expect(stale.getByText("Synthetic central task", { exact: true })).toBeVisible();
     await add(page, "Saved from the first tab");
-    await stale.getByLabel("Create a new todo").fill("Saved from the stale tab");
+    await (await waitForHydrated(stale.getByLabel("Create a new todo"))).fill("Saved from the stale tab");
     await stale.getByRole("button", { name: "Add task", exact: true }).click();
     // The stale write is refused and the list reloads with the other tab's task.
     await expect(stale.getByText("Saved from the first tab", { exact: true })).toBeVisible();
@@ -118,7 +119,7 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
       headers: { origin: todoOrigin }, data: {},
     });
     expect(response.ok()).toBe(true);
-    await listTab.getByLabel("Create a new todo").fill("Never saved");
+    await (await waitForHydrated(listTab.getByLabel("Create a new todo"))).fill("Never saved");
     await listTab.getByRole("button", { name: "Add task", exact: true }).click();
     await expect(listTab.getByRole("heading", { name: "Your list is hidden." })).toBeVisible();
     await expect(listTab.getByRole("link", { name: "Open your current list" })).toBeVisible();
@@ -126,17 +127,17 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
     await listTab.close();
     // Back in through the still-live central session.
     await page.goto(todoOrigin + "/todos");
-    await page.getByRole("button", { name: "Continue with Breakthrough account" }).click();
+    await (await waitForHydrated(page.getByRole("button", { name: "Continue with Breakthrough account" }))).click();
     await expect(page).toHaveURL(todoOrigin + "/todos");
     await page.goto(todoOrigin + "/account");
   });
 
   await test.step("signing out of Todo keeps the central session for a one-click return", async () => {
-    await page.getByRole("button", { name: "Sign out of Todo" }).click();
+    await (await waitForHydrated(page.getByRole("button", { name: "Sign out of Todo" }))).click();
     await expect(page).toHaveURL(/\/login/);
     expect((await page.request.get(todoOrigin + "/api/todos")).status()).toBe(401);
     await page.goto(todoOrigin + "/todos");
-    await page.getByRole("button", { name: "Continue with Breakthrough account" }).click();
+    await (await waitForHydrated(page.getByRole("button", { name: "Continue with Breakthrough account" }))).click();
     await expect(page).toHaveURL(todoOrigin + "/todos");
     await expect(page.getByText("Synthetic central task", { exact: true })).toBeVisible();
   });
@@ -147,7 +148,7 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
     // see redirect hops, so the test takes that redirect itself, sends the callback twice at once
     // with this browser's cookies, and lets the browser follow the second answer.
     await page.goto(todoOrigin + "/account");
-    await page.getByRole("button", { name: "Sign out of Todo" }).click();
+    await (await waitForHydrated(page.getByRole("button", { name: "Sign out of Todo" }))).click();
     await expect(page).toHaveURL(/\/login/);
     const authorize = (url: URL) => url.origin === accountsOrigin && url.pathname.endsWith("/oauth2/authorize");
     const landed: string[] = [];
@@ -163,7 +164,7 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
     });
     try {
       await page.goto(todoOrigin + "/todos");
-      await page.getByRole("button", { name: "Continue with Breakthrough account" }).click();
+      await (await waitForHydrated(page.getByRole("button", { name: "Continue with Breakthrough account" }))).click();
       await expect(page).toHaveURL(todoOrigin + "/todos");
       await expect(page.getByText("Synthetic central task", { exact: true })).toBeVisible();
       expect(landed, "both copies land on the list").toEqual(["/todos", "/todos"]);

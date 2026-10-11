@@ -83,6 +83,8 @@ jobs:
           TODO_PREVIEW_BYPASS: ${{ secrets.TODO_PREVIEW_BYPASS }}
           ACCOUNTS_PREVIEW_BYPASS: ${{ secrets.ACCOUNTS_PREVIEW_BYPASS }}
           AUTH_PREVIEW_SINK_TOKEN: ${{ secrets.AUTH_PREVIEW_SINK_TOKEN }}
+          # Optional: this run gets its own rate-limit budget on the preview issuer (royer-auth #41).
+          AUTH_PREVIEW_TEST_TOKEN: ${{ secrets.ACCOUNTS_PREVIEW_TEST_TOKEN }}
       - name: Remove synthetic accounts
         if: always()
         run: node scripts/cleanup-hosted-accounts.mjs
