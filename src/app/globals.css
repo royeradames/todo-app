@@ -290,11 +290,14 @@ a:focus-visible {
   color: var(--muted);
   text-align: center;
 }
+/* Rows wrap and labels keep their line, so the footer still fits when a
+   reader doubles their text size. */
 .list-footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0 1rem;
   min-height: 50px;
   padding: 0 24px;
   font-size: 1rem;
@@ -304,6 +307,7 @@ a:focus-visible {
 .filters button,
 .list-tools button {
   min-height: 44px;
+  white-space: nowrap;
   padding: 0 4px;
   border: 0;
   background: none;
@@ -319,8 +323,9 @@ a:focus-visible {
 }
 .filters {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 14px;
+  gap: 0 14px;
 }
 .filters button {
   font-weight: 700;
