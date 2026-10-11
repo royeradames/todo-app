@@ -12,7 +12,6 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://todo-app.royeradames.com"),
   title: { default: "Todo | Royer Adames", template: "%s | Todo" },
   description,
-  icons: { icon: "/images/favicon-32x32.png" },
   openGraph: {
     type: "website",
     siteName: "Todo",

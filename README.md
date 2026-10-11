@@ -1,6 +1,6 @@
 # Todo
 
-Private Frontend Mentor Todo implementation and the first central-mode `@royer/auth` consumer. Public `/` is a list saved only in this browser (localStorage), starting from the design's sample tasks. `/todos` is each signed-in person's durable list. The browser list is never imported into an account, and there is no shared family account database.
+Private Todo app, built from the Frontend Mentor Todo challenge's layout, and the first central-mode `@royer/auth` consumer. Public `/` is a list saved only in this browser (localStorage), starting from six example tasks. `/todos` is each signed-in person's durable list. The browser list is never imported into an account, and there is no shared family account database.
 
 ## Accounts
 
@@ -54,6 +54,8 @@ Todo owns `todo_lists` and `todo_items`, foreign-keyed to immutable local user I
 
 ## Design and operation
 
-Official starter: `frontendmentorio/todo-app` at `ab67102eff4ea8c9aa616038660fc811eb72255d`. Supplied source stills are in `reference/design`, images in `public/images`. Layout, spacing, icons, check circles, hover-revealed delete and the separate mobile filter card follow the official design. Two deliberate deviations: text is at least 16px (the design uses 12–14px), and muted, completed and accent colours are adjusted just enough to reach 4.5:1 contrast.
+Layout source: the Frontend Mentor Todo challenge (`frontendmentorio/todo-app` at `ab67102eff4ea8c9aa616038660fc811eb72255d`). Its supplied design stills stay in `reference/design` for comparison only; they are never served, and history keeps them, so this repository stays private until Royer decides about a public submission. Layout, spacing, check circles, hover-revealed delete and the separate mobile filter card follow that design. Two deliberate deviations: text is at least 16px (the design uses 12–14px), and muted, completed and accent colours are adjusted just enough to reach 4.5:1 contrast.
+
+Everything Todo ships is ours (October 11, 2026, because Todo serves a real shared account): the header band is a CSS gradient, the icons are Phosphor Icons (MIT), the app icon is our own drawing, and the example tasks and instructions are our own words. `tests/unit/own-assets.test.ts` fails if a starter image, the starter's icon paths, or its sample tasks and instructions come back. Licences: `THIRD_PARTY_NOTICES.md`.
 
 See `docs/security-contract.md` for privacy, routing and assurance boundaries. Keyboard shortcuts adapt the existing Royer UI guard pattern in a small utility; N focuses a new task, ? opens help and Escape closes it. Drag a task with the mouse, or long-press and drag on touch. Alt with the up or down arrow moves the focused task and keeps focus on it, and "Reorder with buttons" shows move buttons for a single-pointer alternative.

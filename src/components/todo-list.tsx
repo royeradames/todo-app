@@ -305,7 +305,7 @@ export function TodoList({
                 )}
               </form.Subscribe>
               <label className="visually-hidden" htmlFor="new-task">
-                Create a new todo
+                New task
               </label>
               <input
                 ref={input}
@@ -318,7 +318,7 @@ export function TodoList({
                 }}
                 onBlur={field.handleBlur}
                 maxLength={500}
-                placeholder="Create a new todo…"
+                placeholder="Add a task…"
                 autoComplete="off"
                 enterKeyHint="done"
                 aria-invalid={error ? true : undefined}
@@ -504,7 +504,7 @@ export function TodoList({
           {pending ? "Saving…" : notice}
         </p>
       )}
-      <p className="reorder-hint">Drag and drop to reorder list</p>
+      <p className="reorder-hint">Drag tasks to change their order</p>
       <p className="reorder-keys">
         Or press Alt with the up or down arrow to move the focused task.
       </p>

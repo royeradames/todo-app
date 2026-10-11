@@ -81,7 +81,7 @@ async function signInToTodo(page: Page, account: Person) {
   await expect(page).toHaveURL(todoOrigin + "/todos");
 }
 async function add(page: Page, title: string) {
-  await page.getByLabel("Create a new todo").fill(title);
+  await page.getByLabel("New task").fill(title);
   await page.getByRole("button", { name: "Add task", exact: true }).click();
   await expect(page.getByText(title, { exact: true })).toBeVisible();
 }
@@ -142,7 +142,7 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
     await stale.goto(todoOrigin + "/todos");
     await expect(stale.getByText("Synthetic central task", { exact: true })).toBeVisible();
     await add(page, "Saved from the first tab");
-    await stale.getByLabel("Create a new todo").fill("Saved from the stale tab");
+    await stale.getByLabel("New task").fill("Saved from the stale tab");
     await stale.getByRole("button", { name: "Add task", exact: true }).click();
     // The stale write is refused and the list reloads with the other tab's task.
     await expect(stale.getByText("Saved from the first tab", { exact: true })).toBeVisible();
@@ -200,7 +200,7 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
       headers: { origin: todoOrigin }, data: {},
     });
     expect(response.ok()).toBe(true);
-    await listTab.getByLabel("Create a new todo").fill("Never saved");
+    await listTab.getByLabel("New task").fill("Never saved");
     await listTab.getByRole("button", { name: "Add task", exact: true }).click();
     await expect(listTab.getByRole("heading", { name: "Your list is hidden." })).toBeVisible();
     await expect(listTab.getByRole("link", { name: "Open your current list" })).toBeVisible();

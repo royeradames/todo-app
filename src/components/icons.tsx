@@ -1,37 +1,40 @@
-// Inline copies of the starter's icons, coloured by CSS through currentColor.
+// Phosphor Icons (MIT, see THIRD_PARTY_NOTICES.md), the icon set Royer UI
+// uses, inlined so CSS colours them through currentColor.
+function PhosphorIcon({ size, d }: { size: number; d: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 256 256" width={size} height={size}>
+      <path fill="currentColor" d={d} />
+    </svg>
+  );
+}
+
+/** Phosphor "x", regular weight. */
 export function CrossIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 18 18" width="18" height="18">
-      <path
-        fill="currentColor"
-        fillRule="evenodd"
-        d="M16.97 0l.708.707L9.546 8.84l8.132 8.132-.707.707-8.132-8.132-8.132 8.132L0 16.97l8.132-8.132L0 .707.707 0 8.84 8.132 16.971 0z"
-      />
-    </svg>
+    <PhosphorIcon
+      size={18}
+      d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"
+    />
   );
 }
 
+/** Phosphor "moon", fill weight. */
 export function MoonIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 26 26" width="26" height="26">
-      <path
-        fill="currentColor"
-        fillRule="evenodd"
-        d="M13 0c.81 0 1.603.074 2.373.216C10.593 1.199 7 5.43 7 10.5 7 16.299 11.701 21 17.5 21c2.996 0 5.7-1.255 7.613-3.268C23.22 22.572 18.51 26 13 26 5.82 26 0 20.18 0 13S5.82 0 13 0z"
-      />
-    </svg>
+    <PhosphorIcon
+      size={26}
+      d="M235.54,150.21a104.84,104.84,0,0,1-37,52.91A104,104,0,0,1,32,120,103.09,103.09,0,0,1,52.88,57.48a104.84,104.84,0,0,1,52.91-37,8,8,0,0,1,10,10,88.08,88.08,0,0,0,109.8,109.8,8,8,0,0,1,10,10Z"
+    />
   );
 }
 
+/** Phosphor "sun", fill weight. */
 export function SunIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 26 26" width="26" height="26">
-      <path
-        fill="currentColor"
-        fillRule="evenodd"
-        d="M13 21a1 1 0 011 1v3a1 1 0 11-2 0v-3a1 1 0 011-1zm-5.657-2.343a1 1 0 010 1.414l-2.121 2.121a1 1 0 01-1.414-1.414l2.12-2.121a1 1 0 011.415 0zm12.728 0l2.121 2.121a1 1 0 01-1.414 1.414l-2.121-2.12a1 1 0 011.414-1.415zM13 8a5 5 0 110 10 5 5 0 010-10zm12 4a1 1 0 110 2h-3a1 1 0 110-2h3zM4 12a1 1 0 110 2H1a1 1 0 110-2h3zm18.192-8.192a1 1 0 010 1.414l-2.12 2.121a1 1 0 01-1.415-1.414l2.121-2.121a1 1 0 011.414 0zm-16.97 0l2.121 2.12A1 1 0 015.93 7.344L3.808 5.222a1 1 0 011.414-1.414zM13 0a1 1 0 011 1v3a1 1 0 11-2 0V1a1 1 0 011-1z"
-      />
-    </svg>
+    <PhosphorIcon
+      size={26}
+      d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm8,24a64,64,0,1,0,64,64A64.07,64.07,0,0,0,128,64ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"
+    />
   );
 }
 

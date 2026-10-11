@@ -32,14 +32,14 @@ export function writeLocalList(items: readonly Todo[]) {
   return JSON.stringify({ version: 1, items });
 }
 
-/** The design's sample tasks, shown the first time this browser opens Todo. */
+/** Example tasks, shown the first time this browser opens Todo. */
 export const sampleTasks: Todo[] = [
-  ["Complete online JavaScript course", true],
-  ["Jog around the park 3x", false],
-  ["10 minutes meditation", false],
-  ["Read for 1 hour", false],
-  ["Pick up groceries", false],
-  ["Complete Todo App on Frontend Mentor", false],
+  ["Water the plants", true],
+  ["Back up the phone photos", false],
+  ["Book a haircut", false],
+  ["Pay the electricity bill", false],
+  ["Buy coffee beans", false],
+  ["Drag a task to change the order", false],
 ].map(([title, completed], index) => ({
   id: `00000000-0000-4000-8000-00000000000${index + 1}`,
   title: title as string,

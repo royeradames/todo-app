@@ -21,7 +21,7 @@ test("the browser list offers sign-in when accounts exist, and fits a 320px scre
     page.getByRole("link", { name: "Skip to content" }),
   ).toBeFocused();
   await page.keyboard.press("n");
-  await expect(page.getByLabel("Create a new todo")).toBeFocused();
+  await expect(page.getByLabel("New task")).toBeFocused();
   await page.locator("h1").click();
   await page.keyboard.press("?");
   await expect(
