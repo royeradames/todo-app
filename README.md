@@ -29,13 +29,7 @@ The pinned private package archive is `vendor/royer-auth-0.1.0-rc.5.tgz`, SHA-25
 
 **Accounts off.** With no issuer registration (`AUTH_ISSUER_URL`, `AUTH_CLIENT_ID` and `AUTH_CLIENT_SECRET` all empty), accounts are off. That is Production today, because the issuer refuses Vercel Production and no production issuer exists yet. `/` keeps working in this browser and says "Accounts are coming soon"; `/todos` and `/account` redirect to `/login`, which explains the same; the account and list APIs answer 404 "coming soon". Partial or invalid settings log `account_settings_invalid` and also run with accounts off, so a broken setting never turns pages into errors. Other branch previews have no registration either, so they behave like Production.
 
-**Turning accounts on in Production.** No code change is needed; it is only Vercel Production settings, then a redeploy:
-
-1. Register Todo on the production issuer with callback `https://todo-app.royeradames.com/api/auth/federation/callback` and sign-out address `https://todo-app.royeradames.com/account`.
-2. Set `AUTH_BASE_URL=https://todo-app.royeradames.com`, `AUTH_ISSUER_URL=https://accounts.royeradames.com/api/auth`, the issued `AUTH_CLIENT_ID` and sensitive `AUTH_CLIENT_SECRET`, and a fresh sensitive `AUTH_SECRET`.
-3. Attach a Production database as `DATABASE_URL` and `DATABASE_URL_UNPOOLED`, and apply the reviewed migrations to it with `npm run db:migrate`.
-
-Until all of these exist, Production keeps saying accounts are coming soon. Only Preview deployments send the Vercel OIDC token that the protected preview issuer's Trusted Sources rule needs; Production sends none to the public issuer.
+**Suite sign-in (October 2026).** On Vercel, Todo needs no account settings. With its database attached and no operator registration, it is a Breakthrough suite app: its origin is its client ID and Vercel's own OIDC token proves it to the account issuer, which creates the client on first use (royer-auth `docs/suite-clients.md`). Someone already signed in to their Breakthrough account opens `/todos` and comes straight back signed in: the page sends them through silent sign-in (`/api/auth/federation/silent`), with no click and no password. If they are not signed in there, they land on `/login` with the "Continue" button, and silent sign-in stays quiet for 10 minutes. "Sign out of all apps" ends Todo's session and then the account session on the account site, which signs out every other app. "Sign out of Todo only" leaves the others signed in. A preview branch uses the production issuer and asks once for consent; `SUITE_ISSUER_URL` points a preview at the protected preview issuer instead (this project's Trusted Sources rule admits it). The AUTH_* registration below still wins when set, as the fallback.
 
 ## Database
 

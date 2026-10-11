@@ -1,4 +1,5 @@
 import { createFederatedAuth } from "@royer/auth/federation";
+import { vercelSuiteSettings } from "@royer/auth/suite";
 import { getVercelOidcToken } from "@vercel/functions/oidc";
 import type { Pool } from "pg";
 
@@ -61,20 +62,27 @@ export function authSettings(env: Environment = process.env) {
 }
 
 /**
- * Whether this deployment offers accounts. "off" means no issuer has
- * registered Todo here (Production has none yet), so the app runs in
- * browser-only mode and says accounts are coming soon. "invalid" means some
- * account settings exist but cannot work; it is logged and also runs
- * browser-only rather than breaking pages.
+ * Whether this deployment offers accounts.
+ * - "suite": on Vercel with a database and no operator registration. Todo is a suite app: its
+ *   origin is its client ID and Vercel's OIDC token is its credential, so it needs no AUTH_*
+ *   setting at all (royer-auth suite clients, October 2026).
+ * - "on": an operator-registered client (AUTH_ISSUER_URL, AUTH_CLIENT_ID, AUTH_CLIENT_SECRET),
+ *   kept as the fallback and for local development.
+ * - "off": no database or not on Vercel, so the app runs browser-only and says accounts are coming soon.
+ * - "invalid": some settings exist but cannot work; logged, and also browser-only.
  */
-export type AccountMode = "on" | "off" | "invalid";
+export type AccountMode = "suite" | "on" | "off" | "invalid";
 const registration = [
   "AUTH_ISSUER_URL",
   "AUTH_CLIENT_ID",
   "AUTH_CLIENT_SECRET",
 ] as const;
 export function accountMode(env: Environment = process.env): AccountMode {
-  if (registration.every((name) => !env[name]?.trim())) return "off";
+  const registered = registration.some((name) => env[name]?.trim());
+  if (!registered) {
+    if (!env.DATABASE_URL?.trim()) return "off";
+    return vercelSuiteSettings(env) ? "suite" : "off";
+  }
   if (!env.DATABASE_URL?.trim()) return "invalid";
   try {
     authSettings(env);
@@ -104,7 +112,31 @@ export function needsTrustedSource(env: Environment = process.env) {
   return env.VERCEL === "1" && env.VERCEL_ENV === "preview";
 }
 
+/** Todo's own exact origin for this deployment. */
+export function appOrigin(env: Environment = process.env) {
+  if (accountMode(env) === "suite") {
+    const suite = vercelSuiteSettings(env);
+    if (suite) return suite.baseURL;
+  }
+  return authSettings(env).baseURL;
+}
+
+/** The Breakthrough account site this deployment signs in with. */
+export function issuerOrigin(env: Environment = process.env) {
+  if (accountMode(env) === "suite") {
+    const suite = vercelSuiteSettings(env);
+    if (suite) return new URL(suite.issuerURL).origin;
+  }
+  return authSettings(env).issuerOrigin;
+}
+
 export function configureAuth(database: Pool) {
+  if (accountMode() === "suite") {
+    const suite = vercelSuiteSettings();
+    if (!suite) throw new AccountUnavailable(unavailable);
+    // No client ID, client secret or AUTH_SECRET: the local key lives in Todo's own database.
+    return createFederatedAuth({ appId: "todo", appName: "Todo", database, ...suite });
+  }
   const settings = authSettings();
   const onVercel = process.env.VERCEL === "1";
   return createFederatedAuth({

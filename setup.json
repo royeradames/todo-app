@@ -1,52 +1,64 @@
 {
   "app": "todo-app",
-  "explain": "Todo runs with no settings: without an issuer registration it keeps each list in the browser and says accounts are coming soon. These settings turn on Breakthrough account sign-in and the saved list in Production. The Preview registration is scoped to the feat/todo-auth-foundation branch, which this doctor does not read.",
+  "explain": "Todo needs no account settings on Vercel. With a database and no operator registration it is a Breakthrough suite app: its origin is its client ID and Vercel's own OIDC token proves it to accounts.royeradames.com, so no client ID, client secret or AUTH_SECRET exists (royer-auth docs/suite-clients.md). Without a database it keeps each list in the browser and says accounts are coming soon. The AUTH_* settings below are only the operator-registered fallback, used for local development against a local issuer.",
   "vercelProject": "todo-app",
   "scope": "royer-adames-projects",
   "env": [
     {
       "key": "AUTH_ISSUER_URL",
-      "target": ["production"],
+      "target": [
+        "development"
+      ],
       "kind": "config",
       "owner": "agent",
-      "why": "The issuer origin plus /api/auth (https://accounts.royeradames.com/api/auth). Without it, accounts stay off and Todo says they are coming soon.",
-      "agentFix": "Once Todo is registered on the production issuer, run `vercel env add AUTH_ISSUER_URL production --no-sensitive` with the exact issuer URL, then redeploy."
+      "why": "Fallback only (local development or an operator-registered client): The issuer origin plus /api/auth (https://accounts.royeradames.com/api/auth). Without it, accounts stay off and Todo says they are coming soon.",
+      "agentFix": "Not needed on Vercel: Todo signs in as a suite app. For local development, put it in .env.local."
     },
     {
       "key": "AUTH_CLIENT_ID",
-      "target": ["production"],
+      "target": [
+        "development"
+      ],
       "kind": "config",
       "owner": "agent",
-      "why": "Todo's client ID on the issuer, issued for its exact callback and sign-out addresses. Without it, accounts stay off.",
-      "agentFix": "Register Todo on https://accounts.royeradames.com with royer-auth's connect-app.mjs (callback https://todo-app.royeradames.com/api/auth/federation/callback), which writes the client ID and secret to Vercel Production without printing them."
+      "why": "Fallback only (local development or an operator-registered client): Todo's client ID on the issuer, issued for its exact callback and sign-out addresses. Without it, accounts stay off.",
+      "agentFix": "Not needed on Vercel: Todo signs in as a suite app. For local development, put it in .env.local."
     },
     {
       "key": "AUTH_CLIENT_SECRET",
-      "target": ["production"],
+      "target": [
+        "development"
+      ],
       "kind": "secret",
       "owner": "agent",
-      "why": "Proves Todo to the issuer when it exchanges a sign-in code. Without it, accounts stay off; if it leaks, another app could pose as Todo.",
-      "agentFix": "Written Sensitive by royer-auth's connect-app.mjs during registration; never printed or pasted."
+      "why": "Fallback only (local development or an operator-registered client): Proves Todo to the issuer when it exchanges a sign-in code. Without it, accounts stay off; if it leaks, another app could pose as Todo.",
+      "agentFix": "Not needed on Vercel: Todo signs in as a suite app. For local development, put it in .env.local."
     },
     {
       "key": "AUTH_SECRET",
-      "target": ["production"],
+      "target": [
+        "development"
+      ],
       "kind": "secret",
       "owner": "agent",
-      "why": "Todo's own key (32+ characters) for signing its session cookies. Without it, accounts stay off; if it leaks, sessions can be forged.",
-      "agentFix": "Pipe a fresh random value straight in: `openssl rand -hex 32 | vercel env add AUTH_SECRET production --sensitive`, never printed."
+      "why": "Fallback only (local development or an operator-registered client): Todo's own key (32+ characters) for signing its session cookies. Without it, accounts stay off; if it leaks, sessions can be forged.",
+      "agentFix": "Not needed on Vercel: Todo signs in as a suite app. For local development, put it in .env.local."
     },
     {
       "key": "AUTH_BASE_URL",
-      "target": ["production"],
+      "target": [
+        "development"
+      ],
       "kind": "config",
       "owner": "agent",
-      "why": "Todo's exact public origin (https://todo-app.royeradames.com). Sign-in refuses requests addressed to any other host.",
-      "agentFix": "Run `vercel env add AUTH_BASE_URL production --no-sensitive` with https://todo-app.royeradames.com."
+      "why": "Fallback only (local development or an operator-registered client): Todo's exact public origin (https://todo-app.royeradames.com). Sign-in refuses requests addressed to any other host.",
+      "agentFix": "Not needed on Vercel: Todo signs in as a suite app. For local development, put it in .env.local."
     },
     {
       "key": "DATABASE_URL",
-      "target": ["production"],
+      "target": [
+        "production"
+      ],
       "kind": "secret",
       "owner": "agent",
       "why": "Pooled connection to Todo's Production database, which holds each account's principals, sessions and saved list. Without it, accounts stay off.",
@@ -54,7 +66,9 @@
     },
     {
       "key": "DATABASE_URL_UNPOOLED",
-      "target": ["production"],
+      "target": [
+        "production"
+      ],
       "kind": "secret",
       "owner": "agent",
       "why": "Direct connection used only by the reviewed migration scripts; runtime never reads it.",
@@ -66,19 +80,41 @@
       "name": "production list answers",
       "target": "production",
       "url": "https://todo-app.royeradames.com/",
-      "expect": [200],
+      "expect": [
+        200
+      ],
       "ifFails": "Check the todo-app.royeradames.com domain on the Vercel project and that Deployment Protection is all_except_custom_domains."
     }
   ],
   "coverage": {
-    "roots": ["src", "scripts"],
-    "patterns": ["\\benv\\.([A-Z][A-Z0-9_]*)"],
+    "roots": [
+      "src",
+      "scripts"
+    ],
+    "patterns": [
+      "\\benv\\.([A-Z][A-Z0-9_]*)"
+    ],
     "ignore": [
-      { "key": "VERCEL", "reason": "System variable Vercel sets on every deployment." },
-      { "key": "VERCEL_ENV", "reason": "System variable Vercel sets on every deployment." },
-      { "key": "NEON_PROJECT_ID", "reason": "Read by the local migration script from .env.local to confirm the target database; never a runtime setting." },
-      { "key": "TODO_DATABASE_URL", "reason": "Hosted-suite cleanup secret on the GitHub hosted-preview environment, not Vercel." },
-      { "key": "ISSUER_DATABASE_URL", "reason": "Hosted-suite cleanup secret on the GitHub hosted-preview environment, not Vercel." }
+      {
+        "key": "VERCEL",
+        "reason": "System variable Vercel sets on every deployment."
+      },
+      {
+        "key": "VERCEL_ENV",
+        "reason": "System variable Vercel sets on every deployment."
+      },
+      {
+        "key": "NEON_PROJECT_ID",
+        "reason": "Read by the local migration script from .env.local to confirm the target database; never a runtime setting."
+      },
+      {
+        "key": "TODO_DATABASE_URL",
+        "reason": "Hosted-suite cleanup secret on the GitHub hosted-preview environment, not Vercel."
+      },
+      {
+        "key": "ISSUER_DATABASE_URL",
+        "reason": "Hosted-suite cleanup secret on the GitHub hosted-preview environment, not Vercel."
+      }
     ]
   }
 }

@@ -14,7 +14,7 @@ export function getAuth() {
   if (auth !== undefined) return auth;
   const mode = accountMode();
   try {
-    auth = mode === "on" ? configureAuth(getDatabase()) : null;
+    auth = mode === "on" || mode === "suite" ? configureAuth(getDatabase()) : null;
   } catch {
     auth = null;
   }
@@ -48,3 +48,16 @@ export async function currentViewer(headers: Headers): Promise<Viewer> {
 }
 
 export const accountsComingSoon = "Accounts are coming soon.";
+
+/**
+ * Where a signed-out visitor goes to sign in. Signed in once at the Breakthrough account, they come
+ * straight back signed in with no click (silent sign-in). After a failed attempt or a Todo-only
+ * sign-out, the issuer's quiet cookie is set and they see the sign-in page instead.
+ */
+export function signInPath(returnTo: string, cookieHeader: string | null) {
+  // `__Host-royer-todo.quiet` on HTTPS, `royer-todo.quiet` on local HTTP.
+  const quiet = (cookieHeader ?? "").split(";").some((part) => /^(?:__Host-)?royer-todo\.quiet=/.test(part.trim()));
+  return quiet
+    ? "/login?returnTo=" + encodeURIComponent(returnTo)
+    : "/api/auth/federation/silent?returnPath=" + encodeURIComponent(returnTo);
+}

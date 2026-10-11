@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { currentViewer } from "@/lib/auth-server";
+import { currentViewer, signInPath } from "@/lib/auth-server";
 import { SavedTodos } from "@/components/saved-todos";
 import { Providers } from "@/components/providers";
 import { AccountUnavailable } from "@/components/account-unavailable";
@@ -10,8 +10,10 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 export default async function TodosPage() {
-  const viewer = await currentViewer(await headers());
+  const requestHeaders = await headers();
+  const viewer = await currentViewer(requestHeaders);
   if (viewer.state === "unavailable") return <AccountUnavailable />;
+  if (viewer.state === "signed-out") redirect(signInPath("/todos", requestHeaders.get("cookie")));
   if (viewer.state !== "signed-in") redirect("/login?returnTo=%2Ftodos");
   return (
     <Providers>

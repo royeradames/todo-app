@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   accountMode,
+  appOrigin,
+  issuerOrigin,
   needsTrustedSource,
   authSettings,
   AccountUnavailable,
@@ -125,4 +127,28 @@ test("only Preview deployments send the Vercel token to the protected issuer", (
   assert.equal(needsTrustedSource({ VERCEL: "1", VERCEL_ENV: "preview" }), true);
   assert.equal(needsTrustedSource({ VERCEL: "1", VERCEL_ENV: "production" }), false);
   assert.equal(needsTrustedSource({}), false);
+});
+
+// Royer, October 10, 2026: adding an app must be automatic, with no token. On Vercel with its own
+// database, Todo is a suite app and needs no AUTH_* setting at all.
+const vercelProduction = {
+  VERCEL: "1",
+  VERCEL_ENV: "production",
+  VERCEL_PROJECT_PRODUCTION_URL: "todo-app.royeradames.com",
+  DATABASE_URL: complete.DATABASE_URL,
+};
+
+test("on Vercel with a database and no registration, Todo is a suite app", () => {
+  assert.equal(accountMode(vercelProduction), "suite");
+  assert.equal(
+    accountMode({ ...vercelProduction, VERCEL_ENV: "preview", VERCEL_BRANCH_URL: "todo-app-git-feat-x-royer-adames-projects.vercel.app" }),
+    "suite",
+  );
+  assert.equal(appOrigin(vercelProduction), "https://todo-app.royeradames.com");
+  assert.equal(issuerOrigin(vercelProduction), "https://accounts.royeradames.com");
+  // No database, or not on Vercel: browser-only, exactly as before.
+  assert.equal(accountMode({ ...vercelProduction, DATABASE_URL: "" }), "off");
+  assert.equal(accountMode({ DATABASE_URL: complete.DATABASE_URL }), "off");
+  // An operator registration still wins, so the old path is the fallback.
+  assert.equal(accountMode({ ...vercelProduction, ...complete }), "on");
 });

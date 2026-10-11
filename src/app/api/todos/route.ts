@@ -1,5 +1,5 @@
 import { accountsComingSoon, getAuth } from "@/lib/auth-server";
-import { authSettings } from "@/lib/auth-config";
+import { appOrigin } from "@/lib/auth-config";
 import { getDatabase } from "@/lib/database";
 import { createTodoStore, TodoConflict } from "@/lib/todos/store";
 import { InvalidTodoChange } from "@/lib/todos/model";
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
         { error: "Your account changed. Reload your list before saving." },
         { status: 401, headers },
       );
-    const change = await readTodoMutation(request, authSettings().baseURL);
+    const change = await readTodoMutation(request, appOrigin());
     return Response.json(
       {
         ownerId: principal.id,

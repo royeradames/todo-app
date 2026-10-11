@@ -36,13 +36,21 @@ export function Account({
           <h1>Welcome, {name}.</h1>
           <p>{email}</p>
         </div>
-        <button
-          className="button"
-          aria-busy={busy || undefined}
-          onClick={() => void signOut()}
-        >
-          {busy ? "Signing out…" : "Sign out of Todo"}
-        </button>
+        <div className="heading-actions">
+          {/* A top-level post: Todo signs out, then the Breakthrough account ends, which signs out every app. */}
+          <form method="post" action="/api/auth/federation/sign-out">
+            <button className="button" type="submit">
+              Sign out of all apps
+            </button>
+          </form>
+          <button
+            className="button"
+            aria-busy={busy || undefined}
+            onClick={() => void signOut()}
+          >
+            {busy ? "Signing out…" : "Sign out of Todo only"}
+          </button>
+        </div>
       </div>
       {feedback && (
         <p className="notice error" role="alert">
