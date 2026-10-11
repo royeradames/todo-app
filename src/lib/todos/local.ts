@@ -39,7 +39,7 @@ export const sampleTasks: Todo[] = [
   ["Book a haircut", false],
   ["Pay the electricity bill", false],
   ["Buy coffee beans", false],
-  ["Drag a task to change the order", false],
+  ["Return the library books", false],
 ].map(([title, completed], index) => ({
   id: `00000000-0000-4000-8000-00000000000${index + 1}`,
   title: title as string,

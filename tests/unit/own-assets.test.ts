@@ -48,7 +48,12 @@ const starterText = [
   "Complete Todo App on Frontend Mentor",
   "Create a new todo",
   "Drag and drop to reorder list",
+  "frontendmentor.io",
 ];
+// The footer credits the challenge the layout comes from; that link is the
+// one allowed mention.
+const allowed = new Set(["src/app/layout.tsx: frontendmentor.io"]);
+const binary = /\.(png|jpe?g|gif|webp|ico|woff2?|ttf|otf)$/;
 
 test("no shipped file is a Frontend Mentor starter image", () => {
   const copies = all.flatMap((path) => {
@@ -61,12 +66,13 @@ test("no shipped file is a Frontend Mentor starter image", () => {
 
 test("no shipped source carries the starter's icons, sample tasks or instructions", () => {
   const hits = all
-    .filter((path) => /\.(tsx?|css|json|svg)$/.test(path))
+    .filter((path) => !binary.test(path))
     .flatMap((path) => {
       const text = readFileSync(path, "utf8");
       return starterText
         .filter((needle) => text.includes(needle))
         .map((needle) => `${relative(root, path)}: ${needle}`);
-    });
+    })
+    .filter((hit) => !allowed.has(hit));
   assert.deepEqual(hits, []);
 });

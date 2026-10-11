@@ -143,7 +143,7 @@ a:focus-visible {
 }
 .check-circle:checked {
   background:
-    url("/icons/check-bold.svg") center / 12px 12px no-repeat,
+    url("/icons/check-bold.svg") center / 11px 8px no-repeat,
     var(--check) border-box;
 }
 .check-circle:focus-visible {

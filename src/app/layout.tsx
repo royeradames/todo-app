@@ -43,9 +43,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </a>
         {children}
         <footer className="site-footer">
-          Built by <a href="https://royeradames.com">Royer Adames</a> for the{" "}
+          Built by <a href="https://royeradames.com">Royer Adames</a>. Layout
+          from the{" "}
           <a href="https://www.frontendmentor.io/challenges/todo-app-Su1_KokOW">
-            Todo challenge
+            Frontend Mentor Todo challenge
           </a>
           .
         </footer>

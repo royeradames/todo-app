@@ -138,7 +138,7 @@ test("signed-out people can keep a whole list in this browser", async ({ page })
       "Back up the phone photos",
       "Book a haircut",
       "Pay the electricity bill",
-      "Drag a task to change the order",
+      "Return the library books",
     ]);
   });
 
