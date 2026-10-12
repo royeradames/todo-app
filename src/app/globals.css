@@ -114,6 +114,11 @@ a:focus-visible {
   background: transparent;
   color: #fff;
 }
+/* The toggle sits on the header gradient, where the accent ring is about
+   1:1; white reaches 4.5:1 or more on every stop in both themes. */
+.theme-toggle:focus-visible {
+  outline-color: #fff;
+}
 .theme-toggle .icon-sun,
 [data-theme="dark"] .theme-toggle .icon-moon {
   display: none;
