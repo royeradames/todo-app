@@ -330,7 +330,8 @@ a:focus-visible {
 }
 .save-state {
   margin: 16px 0 0;
-  font-size: 16px;
+  /* rem, so the note grows with the reader's text size. */
+  font-size: 1rem;
   color: var(--muted);
   text-align: center;
 }
