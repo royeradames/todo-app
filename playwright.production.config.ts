@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
-// Runs the production build exactly as Vercel Production does today: no
-// account issuer, no client registration and no database. Build first with
-// `npm run build`. Override the port when 4327 is taken.
+// Runs the production build as Vercel Production serves it: a browser-only
+// list with no settings. Build first with `npm run build`. Override the port
+// when 4327 is taken.
 const port = process.env.TODO_PRODUCTION_TEST_PORT ?? "4327";
 const origin = `http://127.0.0.1:${port}`;
 export default defineConfig({
@@ -28,13 +28,6 @@ export default defineConfig({
     env: {
       NODE_ENV: "production",
       NEXT_TELEMETRY_DISABLED: "1",
-      AUTH_BASE_URL: "",
-      AUTH_SECRET: "",
-      AUTH_ISSUER_URL: "",
-      AUTH_CLIENT_ID: "",
-      AUTH_CLIENT_SECRET: "",
-      DATABASE_URL: "",
-      DATABASE_URL_UNPOOLED: "",
     },
     stdout: "ignore",
     stderr: "pipe",

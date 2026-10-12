@@ -1,8 +1,6 @@
 # The pull request gate: types, lint, unit and setup checks, the browser list
-# against `next dev` with an unreachable issuer, the production build, and
-# the production journey against `next start` with no issuer or database.
-# The hosted central sign-in journey stays in hosted.yml, after each Preview
-# deploy of the registered branch.
+# against `next dev`, the production build, and the whole list journey
+# against `next start`.
 #
 # Runner: Royer's self-hosted macOS runner on Mac2 (label royer-ci), because
 # GitHub-hosted jobs are refused by billing. The runner holds one heavy lane

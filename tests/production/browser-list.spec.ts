@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// The production build with no issuer, client registration or database:
-// what Vercel Production serves until a production issuer exists.
+// The production build: my Frontend Mentor solution, a list kept only in this
+// browser. Sign-in and saved lists live in the private suite app.
 
 function watchErrors(page: Page) {
   const errors: string[] = [];
@@ -21,67 +21,22 @@ async function add(page: Page, title: string) {
 
 const titles = (page: Page) => page.locator(".tasks li .task-title").allTextContents();
 
-test("account routes never fail without an issuer; they say accounts are coming soon", async ({
-  page,
-  request,
-}) => {
-  const errors = watchErrors(page);
-  for (const path of ["/todos", "/account"]) {
+test("the solution serves no sign-in pages or account APIs", async ({ request }) => {
+  for (const path of ["/login", "/todos", "/account", "/api/todos", "/api/auth/get-session"]) {
     const response = await request.get(path, { maxRedirects: 0 });
-    expect(response.status(), path).toBe(307);
-    expect(response.headers().location).toBe(
-      `/login?returnTo=${encodeURIComponent(path)}`,
-    );
+    expect(response.status(), path).toBe(404);
     expect(response.headers()["set-cookie"]).toBeUndefined();
   }
-  for (const path of ["/", "/login", "/login?returnTo=%2Ftodos", "/todos", "/account"]) {
-    const response = await page.goto(path);
-    expect(response?.status(), path).toBe(200);
-    expect(response?.headers()["set-cookie"]).toBeUndefined();
-  }
-  // Signed-out people reach the explanation, never a private page or an error.
-  await expect(page).toHaveURL(/\/login\?returnTo=%2Faccount$/);
-  await expect(
-    page.getByRole("heading", { name: "Accounts are coming soon." }),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: /Breakthrough/ })).toHaveCount(0);
-  await page.getByRole("link", { name: "Open your tasks" }).click();
-  await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByLabel("Create a new todo")).toBeVisible();
-
-  for (const [method, path] of [
-    ["GET", "/api/todos"],
-    ["POST", "/api/todos"],
-    ["GET", "/api/auth/get-session"],
-    ["POST", "/api/auth/federation/start"],
-  ] as const) {
-    const response = await request.fetch(path, {
-      method,
-      data: method === "POST" ? {} : undefined,
-      maxRedirects: 0,
-    });
-    expect(response.status(), `${method} ${path}`).toBe(404);
-    expect((await response.json()).error).toMatch(/coming soon/);
-    expect(response.headers()["set-cookie"]).toBeUndefined();
-  }
-  const callback = await request.get(
-    "/api/auth/federation/callback?state=x&code=y",
-    { maxRedirects: 0 },
-  );
-  expect(callback.status()).toBe(303);
-  expect(new URL(callback.headers().location).pathname).toBe("/login");
-  expect(errors).toEqual([]);
 });
 
-test("signed-out people can keep a whole list in this browser", async ({ page }) => {
+test("people can keep a whole list in this browser", async ({ page }) => {
   const errors = watchErrors(page);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
   await expect(
-    page.getByText(
-      "Accounts are coming soon. Your tasks are saved in this browser only.",
-    ),
+    page.getByText("Your tasks are saved in this browser only.", { exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole("link", { name: /sign in/i })).toHaveCount(0);
   await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute(
     "content",
     "Todo",

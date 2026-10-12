@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { applyCommand, type Todo, type TodoCommand } from "@/lib/todos/model";
 import {
@@ -10,7 +9,7 @@ import {
 } from "@/lib/todos/local";
 import { TodoList } from "./todo-list";
 
-// localStorage is the single source of truth for the signed-out list. Other
+// localStorage is the single source of truth for the list. Other
 // tabs announce changes with "storage"; this tab announces its own writes.
 const thisTab = "todo-local-list-change";
 function subscribe(changed: () => void) {
@@ -34,15 +33,8 @@ function storedList() {
 // The server cannot see this browser's list, so it renders the loading state.
 const notLoaded = () => null;
 
-/**
- * The signed-out list. It lives only in this browser, so it works with no
- * account and no server.
- */
-export function LocalTodos({
-  accounts,
-}: {
-  accounts: "off" | "signed-out" | "signed-in";
-}) {
+/** The list. It lives only in this browser, so it works with no account and no server. */
+export function LocalTodos() {
   const raw = useSyncExternalStore(subscribe, storedList, notLoaded);
   // Holds the list only when this browser refuses to store it.
   const [unsaved, setUnsaved] = useState<Todo[] | null>(null);
@@ -62,23 +54,11 @@ export function LocalTodos({
     <TodoList
       items={items ?? []}
       loading={items === null}
-      pending={false}
       change={change}
       notice={
         unsaved
           ? "This browser could not save your tasks. They stay until you close this tab."
-          : accounts === "off"
-            ? "Accounts are coming soon. Your tasks are saved in this browser only."
-            : "Your tasks are saved in this browser."
-      }
-      tools={
-        accounts === "signed-in" ? (
-          <Link href="/todos">Open your saved list</Link>
-        ) : accounts === "signed-out" ? (
-          <Link href="/login?returnTo=%2Ftodos">
-            Sign in to keep your tasks on every device
-          </Link>
-        ) : null
+          : "Your tasks are saved in this browser only."
       }
     />
   );
