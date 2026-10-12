@@ -18,6 +18,24 @@ function files(dir: string): string[] {
 }
 const all = shipped.flatMap((dir) => files(join(root, dir)));
 
+// Every served image and icon, with where it comes from. A new file needs a
+// line here, so nothing arrives unexamined.
+const served: Record<string, string> = {
+  "public/icons/check-bold.svg": "Phosphor Icons check-bold, MIT",
+  "src/app/icon.svg": "our own app icon",
+  "src/app/apple-icon.png": "our own app icon, rendered at 180 px",
+  "src/app/favicon.ico": "our own app icon, rendered at 16, 32 and 48 px",
+};
+const code = /\.(tsx?|css|mjs|js|md)$/;
+
+test("every served image and icon is listed with its source", () => {
+  const found = all
+    .map((path) => relative(root, path))
+    .filter((path) => !code.test(path) && !path.split("/").pop()!.startsWith("."))
+    .sort();
+  assert.deepEqual(found, Object.keys(served).sort());
+});
+
 // SHA-256 prefixes of the starter's images folder (todo-app-main/images).
 const starterImages: Record<string, string> = {
   cf72eaad92c51941: "bg-desktop-dark.jpg",
