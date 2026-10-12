@@ -34,7 +34,7 @@ test("opening the browser list keeps painted content in place", async ({ page })
   }
   await expect(page.getByRole("checkbox")).toHaveCount(6);
   await expect(page.getByText(
-    "Accounts are coming soon. Your tasks are saved in this browser only.",
+    "Your tasks are saved in this browser only.",
   )).toBeVisible();
   await page.waitForTimeout(250);
   const shift = await page.evaluate(() => {

@@ -7,7 +7,6 @@ const config: NextConfig = {
   // size). Builds are small, so always compile from source.
   experimental: { turbopackFileSystemCacheForBuild: false },
   logging: { incomingRequests: false },
-  serverExternalPackages: ["pg"],
   outputFileTracingExcludes: {
     "/*": [".env*", ".test-state/**", "reference/**", "tests/**"],
   },

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import {
   commandSchema,
@@ -39,17 +39,13 @@ type Refocus = { id: string; control: string };
 
 export function TodoList({
   items,
-  pending,
   change,
   notice,
-  tools,
   loading = false,
 }: {
   items: Todo[];
-  pending: boolean;
   change: (command: TodoCommand) => Promise<void>;
   notice: string;
-  tools: ReactNode;
   loading?: boolean;
 }) {
   const [filter, setFilter] = useState<TodoFilter>("all");
@@ -101,7 +97,6 @@ export function TodoList({
   const left = items.filter((item) => !item.completed).length;
 
   async function act(command: TodoCommand, message: string) {
-    if (pending) return;
     try {
       await change(command);
       setAnnouncement(message);
@@ -122,7 +117,7 @@ export function TodoList({
 
   function move(fromId: string, toId: string, control?: string) {
     const item = byId.get(fromId);
-    if (pending || !item || fromId === toId) return;
+    if (!item || fromId === toId) return;
     const position = visible.findIndex((task) => task.id === toId) + 1;
     if (control) refocus.current = { id: fromId, control };
     void act(
@@ -288,7 +283,7 @@ export function TodoList({
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          if (!pending) void form.handleSubmit();
+          void form.handleSubmit();
         }}
       >
         <form.Field name="title">
@@ -300,7 +295,7 @@ export function TodoList({
                     type="submit"
                     className="check-circle add-task"
                     aria-label="Add task"
-                    aria-busy={pending || submitting || undefined}
+                    aria-busy={submitting || undefined}
                   />
                 )}
               </form.Subscribe>
@@ -336,7 +331,7 @@ export function TodoList({
       <section
         className="todo-card"
         aria-label="Task list"
-        aria-busy={pending || loading || undefined}
+        aria-busy={loading || undefined}
       >
         <ul ref={list} className={moveButtons ? "tasks moving" : "tasks"}>
           {shown.map((item) => (
@@ -360,7 +355,7 @@ export function TodoList({
                 step(item, event.key === "ArrowUp" ? -1 : 1, control);
               }}
               onPointerDown={(event) => {
-                if (pending || dragging || event.button !== 0) return;
+                if (dragging || event.button !== 0) return;
                 if ((event.target as HTMLElement).closest("button, input, a"))
                   return;
                 const row = event.currentTarget;
@@ -499,9 +494,9 @@ export function TodoList({
         )}
       </section>
       {!loading && filterButtons("filters-card")}
-      {(notice || pending) && (
+      {notice && (
         <p className="save-state" role="status">
-          {pending ? "Saving…" : notice}
+          {notice}
         </p>
       )}
       <p className="reorder-hint">Drag and drop to reorder list</p>
@@ -530,7 +525,6 @@ export function TodoList({
           a task and press Alt with the up or down arrow to move it.
         </p>
       )}
-      <div className="account-links">{tools}</div>
       <p className="visually-hidden" role="status">
         {announcement}
       </p>

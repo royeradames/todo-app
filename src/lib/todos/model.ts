@@ -7,11 +7,6 @@ export const todoSchema = z.object({
   completed: z.boolean(),
 });
 export type Todo = z.infer<typeof todoSchema>;
-export const snapshotSchema = z.object({
-  version: z.int().check(z.nonnegative()),
-  items: z.array(todoSchema).check(z.maxLength(maxTodos)),
-});
-export type TodoSnapshot = z.infer<typeof snapshotSchema>;
 export const commandSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("add"), title: todoSchema.shape.title }),
   z.strictObject({
@@ -27,10 +22,6 @@ export const commandSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 export type TodoCommand = z.infer<typeof commandSchema>;
-export const mutationSchema = z.strictObject({
-  version: snapshotSchema.shape.version,
-  command: commandSchema,
-});
 export type TodoFilter = "all" | "active" | "completed";
 export class InvalidTodoChange extends Error {}
 
