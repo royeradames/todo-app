@@ -48,3 +48,29 @@ test("filter changes and the item count are announced", async ({ page }) => {
   await page.locator(".filters-inline").getByRole("button", { name: "Completed", exact: true }).click();
   await expect(page.locator("p.visually-hidden[role=status]")).toHaveText(/Showing completed tasks/);
 });
+
+// Found while reviewing the README, October 13, 2026: the light-theme footer
+// links were #2f6ee8 on #fafafa, about 4.46:1, just under WCAG AA 4.5:1.
+test("the footer links reach 4.5:1 in the light theme", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/");
+  const links = page.locator("footer a");
+  await expect(links.first()).toBeVisible();
+  const ratios = await links.evaluateAll((elements) => {
+    const rgb = (value: string) => value.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number);
+    const luminance = (value: string) => {
+      const [r, g, b] = rgb(value).map((channel) => {
+        const c = channel / 255;
+        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const page = getComputedStyle(document.body).backgroundColor;
+    return elements.map((element) => {
+      const [a, b] = [luminance(getComputedStyle(element).color), luminance(page)].sort((x, y) => y - x);
+      return (a + 0.05) / (b + 0.05);
+    });
+  });
+  for (const ratio of ratios) expect(ratio).toBeGreaterThanOrEqual(4.5);
+});
