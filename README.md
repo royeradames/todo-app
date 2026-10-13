@@ -77,14 +77,14 @@ npm ci
 npm run dev   # http://127.0.0.1:4325
 ```
 
-Tasks stay in localStorage in this browser. The first visit shows the design's sample tasks. If storage fails, changes last only until the tab closes. `setup.json` records that the app needs no settings.
+Tasks stay in localStorage in this browser. The first visit shows the design's sample tasks. If storage fails, changes are temporary and disappear when you reload or close the tab. `setup.json` records that the app needs no settings.
 
 - `npm run typecheck`, `npm run lint`, `npm test`: types, static checks, list and storage unit tests, and the browser-only solution check.
 - `npm run test:setup`: checks that the code reads no settings. It also runs as part of `npm test`.
 - `npm run test:browser`: checks the list at 320 px, the skip link and keyboard shortcuts on `next dev`. `TODO_TEST_PORT` overrides port 4325.
 - `npm run build`, then `npm run test:production`: checks the production list journey, reordering, reload, theme, console errors and loading layout. `TODO_PRODUCTION_TEST_PORT` overrides port 4327.
 
-I used the official `frontendmentorio/todo-app` starter at commit `ab67102eff4ea8c9aa616038660fc811eb72255d`. Its design stills are in `reference/design`, and its images are in `public/images`. I kept the separate mobile filter card and hover-revealed delete buttons. I raised small text to at least 16 px instead of the design's 12–14 px, and adjusted muted, completed and accent colours for 4.5:1 contrast.
+I used the official `frontendmentorio/todo-app` starter at commit `ab67102eff4ea8c9aa616038660fc811eb72255d`. Its design stills are in `reference/design`, and its images are in `public/images`. I kept the separate mobile filter card and hover-revealed delete buttons. I raised small text to at least 16 px instead of the design's 12–14 px, and adjusted muted, completed and accent colours for 4.5:1 contrast on the card.
 
 Keyboard shortcuts adapt my existing UI guard pattern. N focuses the new-task field, ? opens help and Escape closes it. Drag with a mouse or long-press and drag on touch. Alt with the up or down arrow reorders the focused task. "Reorder with buttons" shows move buttons.
 
