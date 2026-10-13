@@ -122,7 +122,7 @@ test("people can keep a whole list in this browser", async ({ page }) => {
 
   await test.step("the list and theme survive a reload", async () => {
     const order = await titles(page);
-    await page.getByRole("button", { name: "Toggle light and dark theme" }).click();
+    await page.getByRole("button", { name: "Dark theme", exact: true }).click();
     const theme = await page.locator("html").getAttribute("data-theme");
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme!);
