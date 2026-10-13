@@ -493,7 +493,7 @@ export function TodoList({
         )}
         {!loading && (
           <div className="list-footer">
-            <span aria-live="polite">
+            <span aria-live="polite" aria-atomic="true">
               {left} {left === 1 ? "item" : "items"} left
             </span>
             {filterButtons("filters-inline")}

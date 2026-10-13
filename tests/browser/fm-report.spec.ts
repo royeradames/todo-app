@@ -41,6 +41,8 @@ test("filter changes and the item count are announced", async ({ page }) => {
   await input.press("Enter");
   const count = page.locator(".list-footer").getByText(/items? left/);
   await expect(count).toHaveAttribute("aria-live", "polite");
+  // The number and its words are separate text nodes; read them together.
+  await expect(count).toHaveAttribute("aria-atomic", "true");
   await page.locator(".filters-inline").getByRole("button", { name: "Active", exact: true }).click();
   await expect(page.locator("p.visually-hidden[role=status]")).toHaveText(/Showing active tasks/);
   await page.locator(".filters-inline").getByRole("button", { name: "Completed", exact: true }).click();
