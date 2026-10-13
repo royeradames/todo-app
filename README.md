@@ -1,26 +1,94 @@
-# Todo
+# Frontend Mentor - Todo app solution
 
-My solution to the [Frontend Mentor Todo app challenge](https://www.frontendmentor.io/challenges/todo-app-Su1_KokOW), live at https://todo-app.royeradames.com. It's a list saved only in this browser (localStorage): add, complete, delete and clear tasks, filter All, Active and Completed, drag to reorder, and switch between light and dark themes. It starts from the design's sample tasks and needs no account, server or settings.
+This is a solution to the [Todo app challenge on Frontend Mentor](https://www.frontendmentor.io/challenges/todo-app-Su1_KokOW). My app lets you manage a task list saved in your browser, filter and reorder tasks, and switch between light and dark themes.
 
-The Todo I use every day is a separate private app in my Breakthrough suite, with sign-in and saved lists. This repository is only the Frontend Mentor solution.
+## Table of contents
 
-## Run it
+- [Overview](#overview)
+  - [The challenge](#the-challenge)
+  - [Screenshot](#screenshot)
+  - [Links](#links)
+- [My process](#my-process)
+  - [Built with](#built-with)
+  - [What I learned](#what-i-learned)
+  - [Continued development](#continued-development)
+- [Run it locally](#run-it-locally)
+- [Author](#author)
+
+## Overview
+
+### The challenge
+
+Users should be able to:
+
+- View a layout that fits their device's screen size.
+- See hover states for interactive elements.
+- Add new todos to the list.
+- Mark todos as complete.
+- Delete todos from the list.
+- Filter by All, Active and Completed.
+- Clear all completed todos.
+- Toggle light and dark mode.
+- Drag and drop to reorder items on the list, the challenge's bonus.
+
+### Screenshot
+
+![Todo app at 1440 px](./docs/screenshot.jpg)
+
+### Links
+
+- Solution URL: [My Todo app solution on Frontend Mentor](https://www.frontendmentor.io/solutions/todo-app-with-nextjs-typescript-and-tailwind-C3LK58NzsG)
+- Live Site URL: [Todo app](https://todo-app.royeradames.com)
+
+## My process
+
+### Built with
+
+- Next.js App Router
+- React
+- TypeScript
+- Tailwind CSS and custom CSS
+- TanStack Form
+- Zod Mini for task and stored-data validation
+- localStorage for tasks and theme preference
+- Playwright for browser and production checks
+- Node.js test runner for unit tests
+
+### What I learned
+
+A stale Next.js build cache shipped my previous stylesheet. I learned to clear the cache and check the CSS the site actually serves when a style change does not appear.
+
+The controls below my list jumped down while saved tasks loaded. The server cannot read localStorage, so I show a loading state and hide the content below the list until the browser has loaded the tasks. I added a production check that delays scripts and measures layout shifts.
+
+I cut about 52 KB of gzipped JavaScript by using `zod/mini` with `import * as z`. The namespace import lets the bundler drop schema types I do not use. I kept validation for task commands and saved data, and added a check for imports that bring the larger bundle back.
+
+I finished the drag-and-drop bonus. Touch uses a long press so normal scrolling still works. I also added Alt with the up or down arrow to move a focused task, plus optional move buttons. Moving a task keeps focus on its control.
+
+### Continued development
+
+- I want to show the specific 500-task limit message when the list is full. The model already throws that error, but the form currently shows a generic save error.
+
+## Run it locally
+
+Use Node.js 24.11.1 or newer.
 
 ```bash
 npm ci
 npm run dev   # http://127.0.0.1:4325
 ```
 
-## Checks
+Tasks stay in localStorage in this browser. The first visit shows the design's sample tasks. If storage fails, changes last only until the tab closes. `setup.json` records that the app needs no settings.
 
-- `npm run typecheck`, `npm run lint`, `npm test`: types, static checks, the list model and storage, and `tests/unit/fm-solution-only.test.ts`, which keeps sign-in packages and settings out of this solution.
-- `npm run test:browser`: the list on `next dev` at 320 px, the skip link and keyboard shortcuts (`TODO_TEST_PORT` overrides 4325).
-- `npm run build`, then `npm run test:production`: the production build. The whole list journey works (add, complete, filter, delete, clear, mouse and keyboard reordering, reload, theme) with no console errors, painted content stays in place while the list loads, and no sign-in page or account API exists (`TODO_PRODUCTION_TEST_PORT` overrides 4327).
+- `npm run typecheck`, `npm run lint`, `npm test`: types, static checks, list and storage unit tests, and the browser-only solution check.
+- `npm run test:setup`: checks that the code reads no settings. It also runs as part of `npm test`.
+- `npm run test:browser`: checks the list at 320 px, the skip link and keyboard shortcuts on `next dev`. `TODO_TEST_PORT` overrides port 4325.
+- `npm run build`, then `npm run test:production`: checks the production list journey, reordering, reload, theme, console errors and loading layout. `TODO_PRODUCTION_TEST_PORT` overrides port 4327.
 
-`setup.json` records that the app needs no settings; `npm run test:setup` checks the code reads none.
+I used the official `frontendmentorio/todo-app` starter at commit `ab67102eff4ea8c9aa616038660fc811eb72255d`. Its design stills are in `reference/design`, and its images are in `public/images`. I kept the separate mobile filter card and hover-revealed delete buttons. I raised small text to at least 16 px instead of the design's 12–14 px, and adjusted muted, completed and accent colours for 4.5:1 contrast.
 
-## Design
+Keyboard shortcuts adapt my existing UI guard pattern. N focuses the new-task field, ? opens help and Escape closes it. Drag with a mouse or long-press and drag on touch. Alt with the up or down arrow reorders the focused task. "Reorder with buttons" shows move buttons.
 
-Official starter: `frontendmentorio/todo-app` at `ab67102eff4ea8c9aa616038660fc811eb72255d`. Supplied source stills are in `reference/design`, images in `public/images`. Layout, spacing, icons, check circles, hover-revealed delete and the separate mobile filter card follow the official design. Two deliberate deviations: text is at least 16px (the design uses 12–14px), and muted, completed and accent colours are adjusted just enough to reach 4.5:1 contrast.
+## Author
 
-Keyboard shortcuts adapt the existing Royer UI guard pattern in a small utility: N focuses a new task, ? opens help and Escape closes it. Drag a task with the mouse, or long-press and drag on touch. Alt with the up or down arrow moves the focused task and keeps focus on it, and "Reorder with buttons" shows move buttons for a single-pointer alternative.
+- Website - [Royer Adames](https://royeradames.com)
+- Frontend Mentor - [@royeradames](https://www.frontendmentor.io/profile/royeradames)
