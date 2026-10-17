@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { Josefin_Sans } from "next/font/google";
 import "./globals.css";
+// Not preloaded: text paints at once in the size-matched fallback (next/font swaps by default), so the font
+// needn't compete with the first paint.
 const font = Josefin_Sans({
   subsets: ["latin"],
   weight: ["400", "700"],
   variable: "--font-todo",
+  preload: false,
 });
 const description =
   "A focused task list with light and dark themes, filters and drag-and-drop ordering.";
