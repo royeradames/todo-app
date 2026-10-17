@@ -5,7 +5,7 @@ const config: NextConfig = {
   // cache on, the October 8 production build reused the previous stylesheet
   // and shipped the old CSS with the new markup (the add-task circle had no
   // size). Builds are small, so always compile from source.
-  experimental: { turbopackFileSystemCacheForBuild: false },
+  experimental: { inlineCss: true, turbopackFileSystemCacheForBuild: false },
   logging: { incomingRequests: false },
   outputFileTracingExcludes: {
     "/*": [".env*", ".test-state/**", "reference/**", "tests/**"],
