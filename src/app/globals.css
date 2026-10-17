@@ -12,7 +12,7 @@
   --line: #e3e4f1;
   --circle: #e3e4f1;
   --hover: #494c6b;
-  --accent: #2f6ee8;
+  --accent: #2d6ae0;
   --check: linear-gradient(135deg, #55ddff, #c058f3);
   --shadow: 0 35px 50px -15px rgb(194 195 214 / 50%);
   --hero: url("/images/bg-desktop-light.jpg");
@@ -95,11 +95,11 @@ a:focus-visible {
 }
 .todo-heading h1 {
   margin: 0;
-  font-size: 40px;
+  font-size: 2.5rem;
   line-height: 1;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 15px;
+  letter-spacing: 0.375em;
 }
 .theme-toggle {
   display: grid;
@@ -110,6 +110,11 @@ a:focus-visible {
   border: 0;
   background: transparent;
   color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.theme-toggle:hover {
+  opacity: 0.75;
 }
 .theme-toggle .icon-sun,
 [data-theme="dark"] .theme-toggle .icon-moon {
@@ -427,8 +432,8 @@ kbd {
     margin-bottom: 32px;
   }
   .todo-heading h1 {
-    font-size: 28px;
-    letter-spacing: 10px;
+    font-size: 1.75rem;
+    letter-spacing: 0.357em;
   }
   .new-task {
     gap: 12px;
