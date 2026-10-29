@@ -156,7 +156,7 @@
           ]
         }
       ],
-      "setup": "[ -d node_modules ] || npm ci --no-audit --no-fund > /dev/null 2>&1",
+      "setup": "[ -d node_modules ] || npm ci --no-audit --no-fund > /dev/null",
       "_setup": "npm stays this repo's package manager for now (see the PR that added this file).",
       "setupWhenMissing": "node_modules",
       "boat": {
