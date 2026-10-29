@@ -103,7 +103,8 @@
           "what": "the Playwright browser list against next dev, then the production build and its journeys against next start (CI's order)",
           "lane": "heavy",
           "independent": true,
-          "cmd": "./node_modules/.bin/playwright test && ./node_modules/.bin/next build && ./node_modules/.bin/playwright test -c playwright.production.config.ts",
+          "cmd": "PATH=\"$PWD/node_modules/.bin:$PATH\" ./node_modules/.bin/playwright test && ./node_modules/.bin/next build && PATH=\"$PWD/node_modules/.bin:$PATH\" ./node_modules/.bin/playwright test -c playwright.production.config.ts",
+          "_cmd": "Both Playwright configs start a bare `next dev` / `next start` web server, which finds next through PATH as npm run would (a box without it: 'next: not found', Oct 29, 2026).",
           "boat": true,
           "_boat": "The boat box image ships Google Chrome at /usr/bin/google-chrome, which the config's channel chrome uses.",
           "when": [
