@@ -1,0 +1,169 @@
+{
+  "_about": "royer-merge change-scoped checks for todo-app (affected-checks.mjs reads a repo-root .affected-checks.json before the toolbox's file). Checks with \"boat\": true run on a boat box through run-checks.mjs. Added Oct 28, 2026 (bottleneck rollout).",
+  "profiles": {
+    "todo-app": {
+      "remote": "todo-app",
+      "docs": [
+        "**/*.md",
+        "**/*.MD",
+        "**/*.txt",
+        "docs/**",
+        "reference/**",
+        "artwork/**",
+        ".gitignore"
+      ],
+      "instructions": [
+        "AGENTS.md",
+        "**/AGENTS.md",
+        "CLAUDE.md",
+        ".cursor/rules/**",
+        ".affected-checks.json"
+      ],
+      "global": [
+        "package.json",
+        "package-lock.json",
+        "bun.lock",
+        "bunfig.toml",
+        ".npmrc",
+        "tsconfig.json",
+        "next.config.ts",
+        "next-env.d.ts",
+        "eslint.config.mjs",
+        "postcss.config.mjs",
+        "playwright.config.ts",
+        "playwright.production.config.ts",
+        "vercel.json",
+        ".github/**",
+        "src/app/layout.tsx",
+        "src/app/globals.css",
+        "src/proxy.ts",
+        "src/middleware.ts"
+      ],
+      "checks": [
+        {
+          "name": "typecheck",
+          "what": "tsc --noEmit",
+          "lane": "light",
+          "independent": true,
+          "boat": true,
+          "cmd": "./node_modules/.bin/tsc --noEmit",
+          "when": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.mts"
+          ]
+        },
+        {
+          "name": "lint",
+          "what": "eslint . (the package.json lint script)",
+          "lane": "light",
+          "independent": true,
+          "boat": true,
+          "cmd": "./node_modules/.bin/eslint .",
+          "when": [
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.mts",
+            "**/*.js",
+            "**/*.mjs",
+            "**/*.cjs",
+            "**/*.jsx"
+          ]
+        },
+        {
+          "name": "unit",
+          "what": "node unit tests (the package.json test script)",
+          "lane": "light",
+          "independent": true,
+          "boat": true,
+          "cmd": "node --import tsx --test tests/unit/*.test.ts && node tools/setup-coverage.mjs setup.json --root . --strict",
+          "when": [
+            "src/**",
+            "tests/unit/**",
+            "tools/**",
+            "setup.json"
+          ]
+        },
+        {
+          "name": "build",
+          "what": "next build",
+          "lane": "heavy",
+          "independent": true,
+          "boat": true,
+          "anyCode": true,
+          "cmd": "./node_modules/.bin/next build",
+          "when": [
+            "src/**",
+            "tools/**",
+            "public/**"
+          ]
+        },
+        {
+          "name": "specs",
+          "what": "the Playwright browser list against next dev, then the production build and its journeys against next start (CI's order)",
+          "lane": "heavy",
+          "independent": true,
+          "cmd": "PATH=\"$PWD/node_modules/.bin:$PATH\" ./node_modules/.bin/playwright test && ./node_modules/.bin/next build && PATH=\"$PWD/node_modules/.bin:$PATH\" ./node_modules/.bin/playwright test -c playwright.production.config.ts",
+          "_cmd": "Both Playwright configs start a bare `next dev` / `next start` web server, which finds next through PATH as npm run would (a box without it: 'next: not found', Oct 29, 2026).",
+          "boat": true,
+          "_boat": "The boat box image ships Google Chrome at /usr/bin/google-chrome, which the config's channel chrome uses.",
+          "when": [
+            "src/**",
+            "tools/**",
+            "public/**",
+            "tests/browser/**",
+            "tests/production/**"
+          ]
+        },
+        {
+          "name": "ui-quality-gate",
+          "aliases": [
+            "quality-gate"
+          ],
+          "what": "the UI quality gate on the pages the diff reaches, at promotion only; this repo ships main at merge, so it is the QA-at-promotion list's route source",
+          "routes": true,
+          "at": "promotion",
+          "when": [
+            "src/**",
+            "public/**"
+          ]
+        },
+        {
+          "name": "qa",
+          "what": "independent royer-qa on the PR's own surface",
+          "at": "promotion",
+          "routes": true,
+          "when": [
+            "src/**",
+            "public/**"
+          ],
+          "instructionsToo": true
+        },
+        {
+          "name": "qa-gate",
+          "what": "QA at the head before merge (auth, payments, secrets, deploy config)",
+          "carryAs": "qa",
+          "gate": [
+            "vercel.json",
+            ".env*",
+            "**/.env*",
+            "setup.json",
+            ".github/workflows/**",
+            "middleware.*",
+            "proxy.*",
+            "src/app/api/**",
+            "src/middleware.*",
+            "src/proxy.*"
+          ]
+        }
+      ],
+      "setup": "[ -d node_modules ] || npm ci --no-audit --no-fund > /dev/null || npm install --no-audit --no-fund > /dev/null",
+      "_setup": "npm stays this repo's package manager for now (CI runs npm ci; see the PR that added this file). package-lock.json was written on macOS and lacks Linux optional packages (npm ci on a boat box, Oct 29, 2026: 'Missing: @emnapi/runtime@1.11.3 from lock file'), so where npm ci refuses, setup falls back to npm install. Moving to Bun (a cross-platform bun.lock) removes the fallback.",
+      "setupWhenMissing": "node_modules",
+      "boat": {
+        "setup": "true",
+        "_setup": "The box image's Node and npm are enough."
+      }
+    }
+  }
+}
