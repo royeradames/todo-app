@@ -156,8 +156,8 @@
           ]
         }
       ],
-      "setup": "[ -d node_modules ] || npm ci --no-audit --no-fund > /dev/null",
-      "_setup": "npm stays this repo's package manager for now (see the PR that added this file).",
+      "setup": "[ -d node_modules ] || npm ci --no-audit --no-fund > /dev/null || npm install --no-audit --no-fund > /dev/null",
+      "_setup": "npm stays this repo's package manager for now (CI runs npm ci; see the PR that added this file). package-lock.json was written on macOS and lacks Linux optional packages (npm ci on a boat box, Oct 29, 2026: 'Missing: @emnapi/runtime@1.11.3 from lock file'), so where npm ci refuses, setup falls back to npm install. Moving to Bun (a cross-platform bun.lock) removes the fallback.",
       "setupWhenMissing": "node_modules",
       "boat": {
         "setup": "true",
