@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useForm } from "@tanstack/react-form";
 import {
   commandSchema,
@@ -36,6 +36,17 @@ type Drag = {
 };
 /** The control to focus again after a move re-renders the list. */
 type Refocus = { id: string; control: string };
+
+// The theme lives on <html data-theme>; watch it so the toggle can say which
+// theme is on.
+function subscribeTheme(change: () => void) {
+  const observer = new MutationObserver(change);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  return () => observer.disconnect();
+}
+function readDark() {
+  return document.documentElement.dataset.theme === "dark";
+}
 
 export function TodoList({
   items,
@@ -222,6 +233,9 @@ export function TodoList({
     return () => element.removeEventListener("touchmove", hold);
   }, []);
 
+  // The head script sets data-theme before paint; mirror it so the toggle
+  // can say which theme is on.
+  const dark = useSyncExternalStore(subscribeTheme, readDark, () => false);
   function theme() {
     const next =
       document.documentElement.dataset.theme === "dark" ? "light" : "dark";
@@ -251,7 +265,13 @@ export function TodoList({
           key={value}
           type="button"
           aria-pressed={filter === value}
-          onClick={() => setFilter(value)}
+          onClick={() => {
+            setFilter(value);
+            const shown = value === "all" ? items : items.filter((item) => (value === "completed") === item.completed);
+            setAnnouncement(
+              `Showing ${value === "all" ? "all" : value} tasks: ${shown.length} ${shown.length === 1 ? "task" : "tasks"}.`,
+            );
+          }}
         >
           {label}
         </button>
@@ -266,7 +286,8 @@ export function TodoList({
         <button
           type="button"
           className="theme-toggle"
-          aria-label="Toggle light and dark theme"
+          aria-label="Dark theme"
+          aria-pressed={dark}
           onClick={theme}
         >
           <span className="icon-moon">
@@ -472,7 +493,7 @@ export function TodoList({
         )}
         {!loading && (
           <div className="list-footer">
-            <span>
+            <span aria-live="polite" aria-atomic="true">
               {left} {left === 1 ? "item" : "items"} left
             </span>
             {filterButtons("filters-inline")}
