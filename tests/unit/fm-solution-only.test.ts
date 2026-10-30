@@ -4,15 +4,15 @@ import { test } from "node:test";
 
 // This repository is my public Frontend Mentor solution: a browser-only list.
 // Sign-in and the saved list live in a separate private suite app.
-// Run from the repository root, as `npm test` does.
+// Run from the repository root, as `bun run test` does.
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-const lock = JSON.parse(readFileSync("package-lock.json", "utf8"));
+const lock = readFileSync("bun.lock", "utf8");
 const setup = JSON.parse(readFileSync("setup.json", "utf8"));
 
 test("the solution installs no @royer/auth package", () => {
   assert.equal(pkg.dependencies?.["@royer/auth"], undefined);
   assert.equal(pkg.devDependencies?.["@royer/auth"], undefined);
-  assert.equal(lock.packages?.["node_modules/@royer/auth"], undefined);
+  assert.doesNotMatch(lock, /@royer\/auth["@]/);
 });
 
 test("the solution keeps no vendored package archive", () => {
