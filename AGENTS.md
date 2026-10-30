@@ -17,5 +17,5 @@ Royer, Oct 28, 2026: "I was expecting us to use default tailwind classes for the
 
 ## Checks and installs
 
-- npm is the package manager (`npm ci`).
+- Bun 1.4.4 is the package manager (`bun install --frozen-lockfile`); commit `bun.lock`. Node 24.11.1 remains the runtime for Next.js and the node:test suite.
 - Merges run change-scoped checks from `.affected-checks.json` (royer-merge's affected-checks.mjs). Checks marked `"boat": true` (typecheck, lint, build and the Playwright specs) run on a boat box through run-checks.mjs. Call tools as `./node_modules/.bin/<tool>`.
