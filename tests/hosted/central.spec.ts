@@ -1,92 +1,11 @@
-import { test, expect, type Browser, type Page } from "@playwright/test";
-import { randomBytes } from "node:crypto";
+import { test, expect } from "@playwright/test";
 import { z } from "zod";
-import { accountsOrigin, authorizePreviews, readSink, todoOrigin } from "./hosted-env";
-
-// Synthetic Breakthrough accounts. Reserved .test recipients go to the
-// issuer's preview sink, never to a real inbox. Every address starts with
-// "todo-suite-" so the cleanup step can find and remove them.
-const run = Date.now().toString(36) + randomBytes(3).toString("hex");
-function person(label: string) {
-  return {
-    name: "Todo Suite " + label,
-    username: "todosuite" + label + run,
-    email: "todo-suite-" + label + "-" + run + "@sink.accounts-preview.test",
-    password: "A synthetic Todo phrase " + randomBytes(6).toString("hex"),
-  };
-}
-type Person = ReturnType<typeof person>;
-const mailSchema = z.object({
-  messages: z.array(z.object({ subject: z.string(), text: z.string() })),
-});
-
-async function newPage(browser: Browser) {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  await authorizePreviews(context);
-  return context.newPage();
-}
-async function verificationLink(email: string) {
-  let link = "";
-  await expect
-    .poll(
-      async () => {
-        const response = await readSink(email);
-        if (response.status !== 200) return false;
-        const message = mailSchema
-          .parse(await response.json())
-          .messages.find((item) => item.subject === "Verify your Breakthrough account");
-        link = /https:\/\/\S+/.exec(message?.text ?? "")?.[0] ?? "";
-        return Boolean(link);
-      },
-      { message: "Waiting for the verification message", timeout: 30_000 },
-    )
-    .toBe(true);
-  expect(new URL(link).origin, "Mail links stay on the issuer").toBe(accountsOrigin);
-  return link;
-}
-/** Creates and verifies a central account directly on the issuer. */
-async function createCentralAccount(page: Page, account: Person) {
-  await page.goto(accountsOrigin + "/create-account");
-  await page.getByLabel("Name", { exact: true }).fill(account.name);
-  await page.getByLabel("Username", { exact: true }).fill(account.username);
-  await page.getByLabel("Email", { exact: true }).fill(account.email);
-  await page
-    .locator("input")
-    .and(page.getByLabel("Password", { exact: true }))
-    .fill(account.password);
-  // royer-auth #10: every new-password form has a confirmation field.
-  await page.getByLabel("Confirm password", { exact: true }).fill(account.password);
-  // Live requirements: the long synthetic phrase meets every rule.
-  const rules = page.getByRole("list", { name: "Password requirements" });
-  await expect(rules.getByRole("listitem").first()).toContainText(", met"); // not "not met yet"
-  await expect(rules.getByRole("listitem").filter({ hasText: /not met/ })).toHaveCount(0);
-  await page.getByRole("button", { name: "Create account", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
-  await page.goto(await verificationLink(account.email));
-  // royer-auth #11: the link lands on a readable "verified" page.
-  await expect(page.getByRole("heading", { name: "Your email is verified." })).toBeVisible();
-}
-/** Opens the saved list and signs in through the issuer's own screen. */
-async function signInToTodo(page: Page, account: Person) {
-  await page.goto(todoOrigin + "/todos");
-  await expect(page).toHaveURL(todoOrigin + "/login?returnTo=%2Ftodos");
-  await page.getByRole("button", { name: "Continue with Breakthrough account" }).click();
-  await expect(page).toHaveURL((url) => url.origin === accountsOrigin && url.pathname === "/login");
-  await page.getByLabel("Username or email").fill(account.username);
-  await page
-    .locator("input")
-    .and(page.getByLabel("Password", { exact: true }))
-    .fill(account.password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page).toHaveURL(todoOrigin + "/todos");
-}
-async function add(page: Page, title: string) {
-  await page.getByLabel("Create a new todo").fill(title);
-  await page.getByRole("button", { name: "Add task", exact: true }).click();
-  await expect(page.getByText(title, { exact: true })).toBeVisible();
-}
+import { accountsOrigin, todoOrigin } from "./hosted-env";
+import { add, createCentralAccount, nameIssuerRateLimit, newPage, person, removeCreatedAccounts, signInToTodo, waitForHydrated } from "./accounts";
 
 test.describe.configure({ mode: "serial" });
+test.afterEach(({}, testInfo) => nameIssuerRateLimit(testInfo));
+test.afterAll(removeCreatedAccounts);
 
 test("a Breakthrough account signs in to Todo, keeps a private list and signs out", async ({
   browser,
@@ -142,7 +61,7 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
     await stale.goto(todoOrigin + "/todos");
     await expect(stale.getByText("Synthetic central task", { exact: true })).toBeVisible();
     await add(page, "Saved from the first tab");
-    await stale.getByLabel("Create a new todo").fill("Saved from the stale tab");
+    await (await waitForHydrated(stale.getByLabel("Create a new todo"))).fill("Saved from the stale tab");
     await stale.getByRole("button", { name: "Add task", exact: true }).click();
     // The stale write is refused and the list reloads with the other tab's task.
     await expect(stale.getByText("Saved from the first tab", { exact: true })).toBeVisible();
@@ -200,7 +119,7 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
       headers: { origin: todoOrigin }, data: {},
     });
     expect(response.ok()).toBe(true);
-    await listTab.getByLabel("Create a new todo").fill("Never saved");
+    await (await waitForHydrated(listTab.getByLabel("Create a new todo"))).fill("Never saved");
     await listTab.getByRole("button", { name: "Add task", exact: true }).click();
     await expect(listTab.getByRole("heading", { name: "Your list is hidden." })).toBeVisible();
     await expect(listTab.getByRole("link", { name: "Open your current list" })).toBeVisible();
@@ -208,17 +127,17 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
     await listTab.close();
     // Back in through the still-live central session.
     await page.goto(todoOrigin + "/todos");
-    await page.getByRole("button", { name: "Continue with Breakthrough account" }).click();
+    await (await waitForHydrated(page.getByRole("button", { name: "Continue with Breakthrough account" }))).click();
     await expect(page).toHaveURL(todoOrigin + "/todos");
     await page.goto(todoOrigin + "/account");
   });
 
   await test.step("signing out of Todo keeps the central session for a one-click return", async () => {
-    await page.getByRole("button", { name: "Sign out of Todo" }).click();
+    await (await waitForHydrated(page.getByRole("button", { name: "Sign out of Todo" }))).click();
     await expect(page).toHaveURL(/\/login/);
     expect((await page.request.get(todoOrigin + "/api/todos")).status()).toBe(401);
     await page.goto(todoOrigin + "/todos");
-    await page.getByRole("button", { name: "Continue with Breakthrough account" }).click();
+    await (await waitForHydrated(page.getByRole("button", { name: "Continue with Breakthrough account" }))).click();
     await expect(page).toHaveURL(todoOrigin + "/todos");
     await expect(page.getByText("Synthetic central task", { exact: true })).toBeVisible();
   });
@@ -229,7 +148,7 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
     // see redirect hops, so the test takes that redirect itself, sends the callback twice at once
     // with this browser's cookies, and lets the browser follow the second answer.
     await page.goto(todoOrigin + "/account");
-    await page.getByRole("button", { name: "Sign out of Todo" }).click();
+    await (await waitForHydrated(page.getByRole("button", { name: "Sign out of Todo" }))).click();
     await expect(page).toHaveURL(/\/login/);
     const authorize = (url: URL) => url.origin === accountsOrigin && url.pathname.endsWith("/oauth2/authorize");
     const landed: string[] = [];
@@ -245,7 +164,7 @@ test("a Breakthrough account signs in to Todo, keeps a private list and signs ou
     });
     try {
       await page.goto(todoOrigin + "/todos");
-      await page.getByRole("button", { name: "Continue with Breakthrough account" }).click();
+      await (await waitForHydrated(page.getByRole("button", { name: "Continue with Breakthrough account" }))).click();
       await expect(page).toHaveURL(todoOrigin + "/todos");
       await expect(page.getByText("Synthetic central task", { exact: true })).toBeVisible();
       expect(landed, "both copies land on the list").toEqual(["/todos", "/todos"]);
