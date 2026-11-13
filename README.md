@@ -7,17 +7,19 @@ The Todo I use every day is a separate private app in my Breakthrough suite, wit
 ## Run it
 
 ```bash
-npm ci
-npm run dev   # http://127.0.0.1:4325
+bun install --frozen-lockfile
+bun run dev   # http://127.0.0.1:4325
 ```
 
 ## Checks
 
-- `npm run typecheck`, `npm run lint`, `npm test`: types, static checks, the list model and storage, and `tests/unit/fm-solution-only.test.ts`, which keeps sign-in packages and settings out of this solution.
-- `npm run test:browser`: the list on `next dev` at 320 px, the skip link and keyboard shortcuts (`TODO_TEST_PORT` overrides 4325).
-- `npm run build`, then `npm run test:production`: the production build. The whole list journey works (add, complete, filter, delete, clear, mouse and keyboard reordering, reload, theme) with no console errors, painted content stays in place while the list loads, and no sign-in page or account API exists (`TODO_PRODUCTION_TEST_PORT` overrides 4327).
+- `bun run typecheck`, `bun run lint`, `bun run test`: types, static checks, the list model and storage, and `tests/unit/fm-solution-only.test.ts`, which keeps sign-in packages and settings out of this solution.
+- `bun run test:browser`: the list on `next dev` at 320 px, the skip link and keyboard shortcuts (`TODO_TEST_PORT` overrides 4325).
+- `bun run build`, then `bun run test:production`: the production build. The whole list journey works (add, complete, filter, delete, clear, mouse and keyboard reordering, reload, theme) with no console errors, painted content stays in place while the list loads, and no sign-in page or account API exists (`TODO_PRODUCTION_TEST_PORT` overrides 4327).
 
-`setup.json` records that the app needs no settings; `npm run test:setup` checks the code reads none.
+Use Bun 1.4.4 and Node 24.11.1. Bun installs dependencies and runs scripts; Next.js and the unit suite still execute with Node. Commit `bun.lock` when dependencies change. CI and merge checks use a frozen install without an install fallback.
+
+`setup.json` records that the app needs no settings; `bun run test:setup` checks the code reads none.
 
 ## Design
 

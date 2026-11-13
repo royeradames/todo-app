@@ -72,7 +72,7 @@
         },
         {
           "name": "unit",
-          "what": "node unit tests (the package.json test script)",
+          "what": "node unit tests and setup coverage (the package.json test script)",
           "lane": "light",
           "independent": true,
           "boat": true,
@@ -104,7 +104,7 @@
           "lane": "heavy",
           "independent": true,
           "cmd": "PATH=\"$PWD/node_modules/.bin:$PATH\" ./node_modules/.bin/playwright test && ./node_modules/.bin/next build && PATH=\"$PWD/node_modules/.bin:$PATH\" ./node_modules/.bin/playwright test -c playwright.production.config.ts",
-          "_cmd": "Both Playwright configs start a bare `next dev` / `next start` web server, which finds next through PATH as npm run would (a box without it: 'next: not found', Oct 29, 2026).",
+          "_cmd": "Both Playwright configs start a bare `next dev` / `next start` web server, which finds next through PATH as bun run does.",
           "boat": true,
           "_boat": "The boat box image ships Google Chrome at /usr/bin/google-chrome, which the config's channel chrome uses.",
           "when": [
@@ -157,12 +157,11 @@
           ]
         }
       ],
-      "setup": "[ -d node_modules ] || npm ci --no-audit --no-fund > /dev/null || npm install --no-audit --no-fund > /dev/null",
-      "_setup": "npm stays this repo's package manager for now (CI runs npm ci; see the PR that added this file). package-lock.json was written on macOS and lacks Linux optional packages (npm ci on a boat box, Oct 29, 2026: 'Missing: @emnapi/runtime@1.11.3 from lock file'), so where npm ci refuses, setup falls back to npm install. Moving to Bun (a cross-platform bun.lock) removes the fallback.",
-      "setupWhenMissing": "node_modules",
+      "setup": "test \"$(bun --version)\" = 1.4.4 && bun install --frozen-lockfile",
+      "_setup": "Use the same pinned Bun and frozen cross-platform lockfile as CI, including when node_modules already exists. An install failure must fail the check; never repair the lockfile during a gate.",
       "boat": {
-        "setup": "true",
-        "_setup": "The box image's Node and npm are enough."
+        "setup": "npm install --global bun@1.4.4 && test \"$(bun --version)\" = 1.4.4",
+        "_setup": "Provision the CI-pinned Bun in each disposable box before the frozen install. Node remains the Next.js and node:test runtime."
       }
     }
   }
