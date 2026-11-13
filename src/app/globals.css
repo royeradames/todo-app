@@ -1,24 +1,34 @@
 @import "tailwindcss";
+/* Frontend Mentor Todo palette. Muted, completed and accent colours are
+   darkened (light) or lightened (dark) from the design just enough to reach
+   WCAG AA 4.5:1, and small design text is raised to the family 16px floor. */
 :root {
   color-scheme: light;
   --page: #fafafa;
   --card: #fff;
-  --text: #424357;
-  --muted: #686979;
-  --line: #dddde7;
-  --accent: #245ccd;
-  --shadow: 0 20px 40px #33335420;
+  --text: #494c6b;
+  --muted: #6e6f85;
+  --done: #737487;
+  --line: #e3e4f1;
+  --circle: #e3e4f1;
+  --hover: #494c6b;
+  --accent: #2f6ee8;
+  --check: linear-gradient(135deg, #55ddff, #c058f3);
+  --shadow: 0 35px 50px -15px rgb(194 195 214 / 50%);
   --hero: url("/images/bg-desktop-light.jpg");
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
   --page: #171823;
-  --card: #25273c;
-  --text: #dedfee;
-  --muted: #b1b2c4;
-  --line: #3b3d55;
-  --accent: #8aafff;
-  --shadow: 0 20px 40px #0004;
+  --card: #25273d;
+  --text: #c8cbe7;
+  --muted: #8f92b0;
+  --done: #8f92b0;
+  --line: #393a4b;
+  --circle: #393a4b;
+  --hover: #e3e4f1;
+  --accent: #5b8ffd;
+  --shadow: 0 35px 50px -15px rgb(0 0 0 / 50%);
   --hero: url("/images/bg-desktop-dark.jpg");
 }
 * {
@@ -52,10 +62,6 @@ input {
 button {
   cursor: pointer;
 }
-button:disabled {
-  cursor: default;
-  opacity: 0.55;
-}
 :focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 4px;
@@ -63,17 +69,6 @@ button:disabled {
 button:focus-visible,
 a:focus-visible {
   border-radius: 4px;
-}
-.site-nav {
-  display: flex;
-  justify-content: center;
-  gap: 1.5rem;
-  padding: 1rem;
-  font-size: 1rem;
-}
-.site-nav a {
-  color: white;
-  text-shadow: 0 1px 3px #222;
 }
 .skip-link {
   position: fixed;
@@ -88,76 +83,110 @@ a:focus-visible {
 }
 .todo-main {
   width: min(540px, calc(100% - 48px));
-  margin: 1rem auto 4rem;
+  margin: 0 auto 3rem;
+  padding-top: max(70px, env(safe-area-inset-top));
 }
 .todo-heading {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 40px;
   color: #fff;
 }
 .todo-heading h1 {
-  font-size: 2.5rem;
+  margin: 0;
+  font-size: 40px;
+  line-height: 1;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.65rem;
-  margin: 0;
+  letter-spacing: 15px;
 }
 .theme-toggle {
-  color: white;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  place-items: center end;
   border: 0;
   background: transparent;
-  font-size: 2rem;
-  min-width: 44px;
-  min-height: 44px;
+  color: #fff;
 }
-.account-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-  font-size: 1rem;
+.theme-toggle .icon-sun,
+[data-theme="dark"] .theme-toggle .icon-moon {
+  display: none;
 }
-.account-links a,
-.account-links button {
-  color: white;
-  background: none;
-  border: 0;
-  text-decoration: underline;
-  text-shadow: 0 1px 3px #222;
+[data-theme="dark"] .theme-toggle .icon-sun,
+.theme-toggle .icon-moon {
+  display: grid;
+}
+.check-circle {
+  appearance: none;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    linear-gradient(var(--circle), var(--circle)) border-box;
+  cursor: pointer;
+}
+.check-circle:hover {
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    var(--check) border-box;
+}
+.check-circle:checked {
+  background:
+    url("/images/icon-check.svg") center / 11px 9px no-repeat,
+    var(--check) border-box;
+}
+.check-circle:focus-visible {
+  outline-offset: 3px;
 }
 .new-task {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  background: var(--card);
+  gap: 24px;
+  min-height: 64px;
+  padding: 0 24px;
   border-radius: 5px;
-  padding: 0.8rem 1.25rem;
+  background: var(--card);
   box-shadow: var(--shadow);
 }
 .new-task input {
   flex: 1;
   min-width: 0;
-  padding: 0.4rem 0;
+  padding: 18px 0 16px;
   border: 0;
   background: transparent;
   color: var(--text);
+  caret-color: var(--accent);
+}
+.new-task input:focus-visible {
+  outline: none;
+}
+.new-task:focus-within {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+.new-task:has(.add-task:focus-visible) {
+  outline: none;
 }
 .new-task input::placeholder {
   color: var(--muted);
   opacity: 1;
 }
-.new-task button {
-  border: 0;
-  background: transparent;
-  color: var(--accent);
-  font-weight: 700;
-  min-height: 44px;
+.add-task[aria-busy="true"] {
+  cursor: progress;
+}
+.notice.error {
+  margin: 12px 0 0;
 }
 .todo-card {
+  margin-top: 24px;
   border-radius: 5px;
   background: var(--card);
   box-shadow: var(--shadow);
@@ -168,108 +197,171 @@ a:focus-visible {
   padding: 0;
   list-style: none;
 }
+/* Rows align to the first line, so a long wrapping title keeps its circle
+   and delete button beside its first line. */
 .tasks li {
   display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  padding: 0.65rem 1rem;
-  border-bottom: 1px solid var(--line);
+  align-items: flex-start;
+  gap: 24px;
   min-height: 64px;
+  padding: 18px 24px;
+  line-height: 27px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+  cursor: grab;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
-.task-label {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
+.tasks li.dragging {
+  position: relative;
+  z-index: 1;
+  cursor: grabbing;
+  box-shadow: 0 10px 30px -10px rgb(0 0 0 / 35%);
+}
+.tasks li .check-circle {
+  margin-top: 1.5px;
+}
+.task-title {
   flex: 1;
   min-width: 0;
-  cursor: pointer;
-}
-.task-label span {
   overflow-wrap: anywhere;
+  hyphens: auto;
 }
-.task-label input {
-  flex: none;
-  width: 24px;
-  height: 24px;
-  accent-color: #9061e8;
+/* With move buttons shown, a narrow row drops its buttons under the title
+   instead of squeezing the title. */
+.tasks.moving li {
+  flex-wrap: wrap;
+  row-gap: 4px;
 }
-.complete .task-label span {
+.tasks.moving .task-title {
+  flex: 1 1 9rem;
+}
+.tasks.moving .task-actions {
+  margin-left: auto;
+}
+.complete .task-title {
+  color: var(--done);
   text-decoration: line-through;
-  color: var(--muted);
 }
 .task-actions {
   display: flex;
   flex: none;
+  align-items: center;
+  margin: -8.5px -13px -8.5px 0;
 }
 .task-actions button {
-  width: 32px;
-  min-height: 44px;
-  background: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border: 0;
+  background: none;
   color: var(--muted);
-  font-size: 1.25rem;
 }
 .task-actions button:hover {
-  color: var(--accent);
+  color: var(--hover);
 }
-.task-actions .delete-task {
-  font-size: 1.7rem;
-}
-.list-footer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem;
-  font-size: 1rem;
-  color: var(--muted);
-}
-.list-footer button {
-  background: none;
-  border: 0;
-  color: inherit;
-  padding: 0.15rem;
-}
-.filters {
-  display: flex;
-  gap: 0.6rem;
-}
-.filters button[aria-pressed="true"] {
-  color: var(--accent);
-  font-weight: 700;
-}
-.filters button:hover,
-.list-footer button:hover {
-  color: var(--text);
+@media (hover: hover) {
+  .tasks li .delete-task {
+    opacity: 0;
+  }
+  .tasks li:hover .delete-task,
+  .tasks li:focus-within .delete-task {
+    opacity: 1;
+  }
 }
 .empty-list {
   margin: 0;
-  padding: 2rem 1rem;
+  padding: 2rem 24px;
+  border-bottom: 1px solid var(--line);
   color: var(--muted);
   text-align: center;
 }
-.reorder-hint,
-.shortcut-help {
-  font-size: 1rem;
+.list-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 50px;
+  padding: 0 24px;
+  font-size: 16px;
+  color: var(--muted);
+}
+.list-footer button,
+.filters button,
+.list-tools button {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+}
+.list-footer button:hover,
+.filters button:hover,
+.list-tools button:hover {
+  color: var(--hover);
+}
+.clear-completed {
+  margin-right: -4px;
+}
+.filters {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}
+.filters button {
+  font-weight: 700;
+}
+.filters button[aria-pressed="true"] {
+  color: var(--accent);
+}
+.filters-card {
+  display: none;
+}
+.save-state {
+  margin: 16px 0 0;
+  font-size: 16px;
   color: var(--muted);
   text-align: center;
 }
 .reorder-hint {
-  margin: 2rem 0 0.75rem;
+  margin: 48px 0 0;
+  font-size: 16px;
+  color: var(--muted);
+  text-align: center;
 }
-.shortcut-help {
+.reorder-keys {
+  display: none;
+  margin: 8px 0 0;
+  font-size: 16px;
+  color: var(--muted);
+  text-align: center;
+}
+.todo-main:has(.tasks :focus-visible) .reorder-keys {
   display: block;
-  margin: auto;
-  padding: 0.35rem;
-  border: 0;
-  background: transparent;
+}
+.list-tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 24px;
+  margin-top: 8px;
+  font-size: 16px;
+}
+.list-tools button {
   text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.list-tools button[aria-pressed="true"] {
+  color: var(--accent);
 }
 .keyboard-help {
-  font-size: 1rem;
+  margin: 12px 0 0;
   padding: 1rem;
   border: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: 16px;
 }
 kbd {
   font: inherit;
@@ -277,18 +369,38 @@ kbd {
   border-radius: 3px;
   padding: 0 0.3rem;
 }
-.save-state {
-  font-size: 1rem;
-  margin: 0.5rem 0;
-  padding: 0.35rem 0.6rem;
-  border-radius: 4px;
-  background: var(--card);
+.account-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 1.5rem;
+  margin-top: 16px;
+  font-size: 16px;
+}
+.account-links:empty {
+  display: none;
+}
+.account-links a,
+.account-links button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+}
+.back-link {
+  display: inline-block;
+  margin-bottom: 1rem;
+  font-size: 16px;
 }
 .site-footer {
   margin: 2rem auto;
-  padding: 0 1.5rem;
+  padding: 0 1.5rem max(0px, env(safe-area-inset-bottom));
   text-align: center;
-  font-size: 1rem;
+  font-size: 16px;
   color: var(--muted);
 }
 .visually-hidden {
@@ -313,6 +425,7 @@ kbd {
 }
 .auth-layout {
   max-width: 600px;
+  margin-top: 70px;
 }
 .auth-layout h1,
 .dashboard h1 {
@@ -507,34 +620,81 @@ h3 {
     --hero: url("/images/bg-mobile-dark.jpg");
   }
   body::before {
-    height: 220px;
+    height: 200px;
   }
   .todo-main {
-    margin-top: 1rem;
+    padding-top: max(48px, env(safe-area-inset-top));
+  }
+  .todo-heading {
+    margin-bottom: 32px;
   }
   .todo-heading h1 {
-    font-size: 2rem;
+    font-size: 28px;
+    letter-spacing: 10px;
   }
-  .filters {
-    order: 3;
-    width: 100%;
-    justify-content: center;
+  .new-task {
+    gap: 12px;
+    min-height: 52px;
+    padding: 0 20px;
   }
-  .task-actions {
-    flex-direction: column;
+  .new-task input {
+    padding: 14px 0 12px;
+    font-size: 16px;
   }
-  .task-actions button {
-    min-height: 28px;
+  .check-circle {
+    width: 20px;
+    height: 20px;
+  }
+  .todo-card {
+    margin-top: 16px;
   }
   .tasks li {
-    padding: 0.6rem 1rem;
+    gap: 12px;
+    min-height: 53px;
+    padding: 14px 20px;
+    font-size: 16px;
+    line-height: 24px;
   }
-  .dashboard-grid {
-    grid-template-columns: 1fr;
+  .tasks li .check-circle {
+    margin-top: 2px;
+  }
+  .task-actions {
+    margin: -10px -14px -10px 0;
+  }
+  .task-actions svg {
+    width: 12px;
+    height: 12px;
+  }
+  .task-actions button {
+    width: 40px;
+  }
+  .list-footer {
+    padding: 0 20px;
+  }
+  .filters-inline {
+    display: none;
+  }
+  .filters-card {
+    display: flex;
+    min-height: 48px;
+    align-items: center;
+    margin-top: 16px;
+    border-radius: 5px;
+    background: var(--card);
+    box-shadow: var(--shadow);
+  }
+  .reorder-hint {
+    margin-top: 40px;
   }
   .auth-layout,
   .dashboard {
     padding: 1.25rem;
+  }
+  .auth-layout {
+    margin-top: 48px;
+  }
+  .dashboard-grid {
+    grid-template-columns: 1fr;
   }
   .dashboard-heading {
     flex-direction: column;

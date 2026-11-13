@@ -12,12 +12,14 @@
     "start": "next start --hostname 127.0.0.1 --port 4325",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test tests/unit/*.test.ts",
+    "test": "node --import tsx --test tests/unit/*.test.ts && npm run test:setup",
+    "test:setup": "node tools/setup-coverage.mjs setup.json --root . --strict",
     "test:integration": "node --env-file=.env.local --import tsx --test tests/integration/*.test.ts",
     "test:browser": "playwright test",
     "db:plan": "node --env-file=.env.local --import tsx scripts/plan-migration.ts",
     "db:migrate": "node --env-file=.env.local --import tsx scripts/apply-migration.ts",
-    "test:hosted": "playwright test -c playwright.hosted.config.ts"
+    "test:hosted": "playwright test -c playwright.hosted.config.ts",
+    "test:production": "playwright test -c playwright.production.config.ts"
   },
   "dependencies": {
     "@royer/auth": "file:vendor/royer-auth-0.1.0-rc.4.tgz",

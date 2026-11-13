@@ -1,4 +1,4 @@
-import { getAuth } from "@/lib/auth-server";
+import { accountsComingSoon, getAuth } from "@/lib/auth-server";
 import { authSettings } from "@/lib/auth-config";
 import { getDatabase } from "@/lib/database";
 import { createTodoStore, TodoConflict } from "@/lib/todos/store";
@@ -23,9 +23,17 @@ function errorResponse(error: unknown) {
     { status: 503, headers },
   );
 }
+// Without accounts the list lives in the browser; there is no server list.
+const comingSoon = () =>
+  Response.json(
+    { error: `${accountsComingSoon} Your list is saved in this browser.` },
+    { status: 404, headers },
+  );
 export async function GET(request: Request) {
+  const accounts = getAuth();
+  if (!accounts) return comingSoon();
   try {
-    const principal = await getAuth().getPrincipal(request.headers);
+    const principal = await accounts.getPrincipal(request.headers);
     if (!principal)
       return Response.json(
         { error: "Sign in to view your list." },
@@ -43,8 +51,10 @@ export async function GET(request: Request) {
   }
 }
 export async function POST(request: Request) {
+  const accounts = getAuth();
+  if (!accounts) return comingSoon();
   try {
-    const principal = await getAuth().getPrincipal(request.headers);
+    const principal = await accounts.getPrincipal(request.headers);
     if (!principal)
       return Response.json(
         { error: "Sign in to change your list." },
